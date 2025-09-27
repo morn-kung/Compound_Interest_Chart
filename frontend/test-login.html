@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Login - GAS Connection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">🔍 Test Login Connection to GAS</h1>
+        
+        <!-- Test Form -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">Login Test Form</h2>
+            <form id="testForm">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Username:</label>
+                        <input type="text" id="username" value="4498" 
+                               class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Password:</label>
+                        <input type="password" id="password" value="likit.se4498" 
+                               class="w-full border rounded px-3 py-2">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">GAS URL:</label>
+                    <input type="text" id="gasUrl" 
+                           value="https://script.google.com/macros/s/AKfycbw4MK7BupKGaWI92A05pkHU8j5gGs2Krls7K4oEaqUEAuIR-xOi26TZw-58s3rBZKgo/exec"
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    🧪 Test Login
+                </button>
+            </form>
+        </div>
+        
+        <!-- Test Results -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📋 Test Results</h2>
+            <div id="results" class="space-y-4">
+                <p class="text-gray-500">Click "Test Login" to start testing...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await testLogin();
+        });
+        
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const gasUrl = document.getElementById('gasUrl').value;
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = '<div class="text-blue-600">🔄 Testing connection...</div>';
+            
+            try {
+                // Test 1: Basic URL connectivity
+                addResult('🌐 Testing GAS URL connectivity...', 'info');
+                
+                const testResponse = await fetch(gasUrl + '?test=ping', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                addResult(`✅ URL Response: ${testResponse.status} (${testResponse.statusText})`, 'success');
+                
+                // Test 2: Login attempt
+                addResult('🔐 Testing login request...', 'info');
+                
+                const loginData = new URLSearchParams({
+                    action: 'login',
+                    username: username,
+                    password: password
+                });
+                
+                addResult(`📤 Sending data: ${loginData.toString()}`, 'info');
+                
+                const loginResponse = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: loginData
+                });
+                
+                addResult(`📥 Login Response Status: ${loginResponse.status}`, 'info');
+                addResult(`📥 Response Headers: ${JSON.stringify([...loginResponse.headers.entries()])}`, 'info');
+                
+                const responseText = await loginResponse.text();
+                addResult(`📄 Raw Response: ${responseText}`, 'info');
+                
+                // Try to parse as JSON
+                try {
+                    const result = JSON.parse(responseText);
+                    addResult(`✅ Parsed JSON Response:`, 'success');
+                    addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(result, null, 2)}</pre>`, 'success');
+                    
+                    if (result.status === 'success') {
+                        addResult('🎉 Login successful!', 'success');
+                        if (result.data && result.data.token) {
+                            addResult(`🔑 Token received: ${result.data.token.substring(0, 20)}...`, 'success');
+                        }
+                        if (result.data && result.data.user) {
+                            addResult(`👤 User data: ${JSON.stringify(result.data.user)}`, 'success');
+                        }
+                    } else {
+                        addResult(`❌ Login failed: ${result.message}`, 'error');
+                    }
+                } catch (parseError) {
+                    addResult(`❌ Failed to parse JSON: ${parseError.message}`, 'error');
+                    addResult(`📄 Response might not be JSON format`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`💥 Network Error: ${error.message}`, 'error');
+                
+                // Additional debugging
+                if (error.name === 'TypeError' && error.message.includes('CORS')) {
+                    addResult('🚫 CORS Error detected. Check GAS deployment settings.', 'error');
+                } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    addResult('🌐 Network request failed. Check URL and internet connection.', 'error');
+                }
+            }
+        }
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            
+            const colors = {
+                info: 'text-blue-600',
+                success: 'text-green-600', 
+                error: 'text-red-600'
+            };
+            
+            div.className = `p-2 border-l-4 ${type === 'error' ? 'border-red-400 bg-red-50' : 
+                                              type === 'success' ? 'border-green-400 bg-green-50' : 
+                                              'border-blue-400 bg-blue-50'} ${colors[type]}`;
+            div.innerHTML = message;
+            
+            if (resultsDiv.firstChild && resultsDiv.firstChild.textContent.includes('Click "Test Login"')) {
+                resultsDiv.innerHTML = '';
+            }
+            
+            resultsDiv.appendChild(div);
+            
+            // Auto-scroll to bottom
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        // Auto-test on page load for quick debugging
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Test page loaded. Ready to test GAS connection.');
+        });
+    </script>
+</body>
+</html>

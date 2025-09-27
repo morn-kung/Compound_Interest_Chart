@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Fixed POST Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🔧 Test Fixed POST Login</h1>
+        
+        <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-6">
+            <h2 class="font-semibold">🛠️ Changes Made:</h2>
+            <ul class="list-disc ml-6 mt-2">
+                <li>Fixed POST parameter extraction: <code>e.parameters</code> vs <code>e.parameter</code></li>
+                <li>Added comprehensive logging for debugging</li>
+                <li>Added parameter validation with detailed error messages</li>
+                <li>Form data now properly handled as arrays</li>
+            </ul>
+        </div>
+        
+        <!-- Status Display -->
+        <div id="statusDisplay" class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">📊 Login Status</h2>
+            <div id="loginStatus" class="text-gray-500">Ready to test fixed POST login...</div>
+        </div>
+        
+        <!-- Login Form -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🔑 Fixed Login Form</h2>
+            <form id="loginForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Username:</label>
+                        <input type="text" id="username" value="4498" 
+                               class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Password:</label>
+                        <input type="password" id="password" value="likit.se4498" 
+                               class="w-full border rounded px-3 py-2">
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                        🚀 Test Fixed Login
+                    </button>
+                    <button type="button" onclick="testBothMethods()" 
+                            class="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700">
+                        🔬 Compare GET vs POST
+                    </button>
+                    <button type="button" onclick="testAuthenticatedAPI()" 
+                            class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                        🔐 Test Authenticated API
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- API Response -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📡 API Response</h2>
+            <div id="apiResponse" class="bg-gray-50 p-4 rounded text-sm font-mono h-80 overflow-y-auto whitespace-pre">
+Waiting for API response...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt/exec';
+        
+        // Update status display
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('loginStatus');
+            const colors = {
+                info: 'text-blue-600',
+                success: 'text-green-600',
+                error: 'text-red-600'
+            };
+            statusDiv.className = colors[type];
+            statusDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+        }
+        
+        // Update API response display
+        function updateResponse(data, title = 'Response') {
+            const responseDiv = document.getElementById('apiResponse');
+            const timestamp = new Date().toLocaleTimeString();
+            const newContent = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n\n`;
+            responseDiv.textContent = newContent + responseDiv.textContent;
+        }
+        
+        // Clear response display
+        function clearResponse() {
+            document.getElementById('apiResponse').textContent = 'Cleared...\n';
+        }
+        
+        // POST Login Test
+        async function loginPOST(username, password) {
+            try {
+                updateStatus('🔄 Testing POST login...', 'info');
+                
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                updateResponse(data, 'POST Login');
+                
+                if (data.status === 'success') {
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    updateStatus(`✅ POST Login Success! Welcome ${data.user.name}`, 'success');
+                    return data;
+                } else {
+                    updateStatus(`❌ POST Login Failed: ${data.message}`, 'error');
+                    return null;
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ POST Login Error: ${error.message}`, 'error');
+                updateResponse({ error: error.message }, 'POST Error');
+                return null;
+            }
+        }
+        
+        // GET Login Test (for comparison)
+        async function loginGET(username, password) {
+            try {
+                updateStatus('🔄 Testing GET login...', 'info');
+                
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testLoginStepByStep');
+                url.searchParams.set('username', username);
+                url.searchParams.set('password', password);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                updateResponse(data, 'GET Login Test');
+                
+                return data;
+                
+            } catch (error) {
+                updateStatus(`❌ GET Login Error: ${error.message}`, 'error');
+                updateResponse({ error: error.message }, 'GET Error');
+                return null;
+            }
+        }
+        
+        // Test both methods
+        async function testBothMethods() {
+            clearResponse();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            updateStatus('🔬 Comparing GET vs POST methods...', 'info');
+            
+            // Test GET first
+            await loginGET(username, password);
+            
+            // Wait a bit
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Test POST
+            await loginPOST(username, password);
+        }
+        
+        // Test authenticated API call
+        async function testAuthenticatedAPI() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                updateStatus('❌ No auth token found. Please login first.', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('🔄 Testing authenticated API call...', 'info');
+                
+                const response = await fetch(`${GAS_URL}?action=getDashboardData&token=${token}`, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                updateResponse(data, 'Authenticated API');
+                
+                if (data.status === 'success') {
+                    updateStatus('✅ Authenticated API call successful!', 'success');
+                } else {
+                    updateStatus(`❌ API call failed: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ API error: ${error.message}`, 'error');
+                updateResponse({ error: error.message }, 'API Error');
+            }
+        }
+        
+        // Form submit handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearResponse();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            await loginPOST(username, password);
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStatus('🚀 Ready to test FIXED POST login!', 'info');
+            
+            // Check if already logged in
+            const token = localStorage.getItem('authToken');
+            const user = localStorage.getItem('currentUser');
+            
+            if (token && user) {
+                const userData = JSON.parse(user);
+                updateStatus(`🔐 Already logged in as: ${userData.name}`, 'success');
+                updateResponse({ 
+                    status: 'already_logged_in',
+                    token: token,
+                    user: userData
+                }, 'Existing Session');
+            }
+        });
+    </script>
+</body>
+</html>

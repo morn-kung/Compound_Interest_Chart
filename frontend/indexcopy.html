@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Journal & Compound Calculator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .container {
+            max-width: 900px;
+        }
+        #compoundingChart {
+            max-width: 100%;
+            height: 400px;
+        }
+        .tab-button.active {
+            @apply border-b-2 border-blue-600 text-blue-600 font-semibold;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="container mx-auto bg-white p-6 md:p-10 rounded-xl shadow-2xl border border-gray-200">
+        <!-- User Info Bar -->
+        <div id="userInfoBar" class="flex justify-between items-center mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div>
+                <span class="text-sm text-gray-600">ผู้ใช้:</span>
+                <span id="userDisplayName" class="font-semibold text-blue-700 ml-1">Loading...</span>
+                <span class="text-xs text-gray-500 ml-2" id="userRole"></span>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="text-sm text-gray-600">Balance:</span>
+                <span id="currentBalance" class="font-bold text-green-600">$0.00</span>
+                <button id="logoutButton" class="text-sm text-red-600 hover:text-red-800 underline">
+                    ออกจากระบบ
+                </button>
+            </div>
+        </div>
+        
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-blue-700 mb-6 text-center">
+            Trading & Compound Interest Planner
+        </h1>
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b mb-6">
+            <button id="tab-calculator" class="tab-button active px-4 py-2 text-gray-600 focus:outline-none transition-colors duration-200">
+                🚀 Compound Planner
+            </button>
+            <button id="tab-recorder" class="tab-button px-4 py-2 text-gray-600 focus:outline-none transition-colors duration-200">
+                ✍️ บันทึกการเทรดรายวัน
+            </button>
+        </div>
+
+        <!-- 1. Compound Calculator Tab Content (Logic remains unchanged) -->
+        <div id="content-calculator">
+            <p class="text-base sm:text-lg text-gray-600 mb-6 text-center">
+                เงินต้น: <span id="initialCapitalDisplay" class="font-semibold text-gray-800">$100</span> | กำไร: <span class="font-semibold text-gray-800">1% ต่อวัน</span>
+            </p>
+            <p class="text-center text-sm text-gray-500 mb-4">
+                ระยะเวลา: <span id="durationDisplay">3 ปี (1095 วัน)</span>
+            </p>
+            
+            <!-- Input Section for Capital, Year and Exchange Rate -->
+            <div class="flex flex-col sm:flex-row items-center justify-center mb-6 space-y-4 sm:space-y-0 sm:space-x-8">
+                <div class="flex flex-col items-center">
+                    <label for="initialCapitalInput" class="text-sm font-medium text-gray-700 mb-1">เงินต้นเริ่มต้น (USD):</label>
+                    <input type="number" id="initialCapitalInput" value="100" min="100" class="w-24 px-4 py-2 text-center border border-gray-400 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                    <p id="capitalWarning" class="text-red-500 text-xs mt-1 hidden">เงินต้นขั้นต่ำคือ $100</p>
+                </div>
+                <div class="flex flex-col items-center">
+                    <label for="yearInput" class="text-sm font-medium text-gray-700 mb-1">ระยะเวลา (ปี):</label>
+                    <input type="number" id="yearInput" value="3" step="1" min="1" max="5" class="w-24 px-4 py-2 text-center border border-gray-400 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+                <div class="flex flex-col items-center">
+                    <label for="exchangeRateInput" class="text-sm font-medium text-gray-700 mb-1">อัตราแลกเปลี่ยน (1 USD = ? THB):</label>
+                    <input type="number" id="exchangeRateInput" value="31" step="0.01" class="w-24 px-4 py-2 text-center border border-gray-400 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                </div>
+            </div>
+            
+            <!-- Summary Section -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-center">
+                <div class="bg-blue-50 p-4 rounded-lg shadow-sm">
+                    <p class="text-sm text-gray-500">เงินต้นเริ่มต้น</p>
+                    <p id="summaryInitialCapital" class="text-2xl font-bold text-gray-800">$100.00</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg shadow-sm">
+                    <p class="text-sm text-gray-500">ยอดรวมสุดท้าย (บาท)</p>
+                    <p id="finalAmount" class="text-2xl font-extrabold text-green-600">กำลังคำนวณ...</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                    <p class="text-sm text-gray-500">กำไรสุทธิ (บาท)</p>
+                    <p id="netProfit" class="text-2xl font-bold text-gray-800">กำลังคำนวณ...</p>
+                </div>
+            </div>
+
+            <div class="w-full mt-6">
+                <canvas id="compoundingChart"></canvas>
+            </div>
+            
+            <!-- Tables (Hidden for brevity in this view, retained in JS logic) -->
+            <div class="bg-white p-6 rounded-xl shadow-2xl border border-gray-200 mt-6 hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">ตารางสรุปผลประกอบการรายเดือน (1 ปี)</h2>
+                <div class="overflow-x-auto">
+                    <table id="yearlySummaryTable" class="min-w-full text-sm text-left text-gray-500 border-collapse">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-3 py-2 text-center rounded-tl-lg">เดือนที่</th>
+                                <th scope="col" class="px-3 py-2 text-right">เงินต้นเริ่มต้น (USD)</th>
+                                <th scope="col" class="px-3 py-2 text-right">กำไรรายเดือน (USD)</th>
+                                <th scope="col" class="px-3 py-2 text-right rounded-tr-lg">เงินรวมสิ้นเดือน (USD)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-xl shadow-2xl border border-gray-200 mt-6 hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">ตารางจำลอง: การเติบโต 1% ต่อวัน (30 วัน)</h2>
+                <div class="overflow-x-auto">
+                    <table id="dailyTradingTable" class="min-w-full text-sm text-left text-gray-500 border-collapse">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-3 py-2 text-center rounded-tl-lg">วันที่</th>
+                                <th scope="col" class="px-3 py-2 text-right">เงินต้น (USD)</th>
+                                <th scope="col" class="px-3 py-2 text-right">กำไร 1% (USD)</th>
+                                <th scope="col" class="px-3 py-2 text-right">เงินรวม (USD)</th>
+                                <th scope="col" class="px-3 py-2 text-center rounded-tr-lg">Lot Size</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Daily Trade Recorder Tab Content -->
+        <div id="content-recorder" class="hidden">
+            <p class="text-lg text-gray-600 mb-6 text-center">บันทึกผลการเทรดประจำวันเพื่อติดตามการเติบโตแบบทบต้นจริง</p>
+            <form id="tradeForm" class="space-y-4">
+                
+                <!-- Container for multiple dynamic trade entries -->
+                <div id="tradeEntriesContainer" class="space-y-6">
+                    <!-- Trade Entry Blocks will be dynamically added here -->
+                </div>
+
+                <!-- Button to add new entry -->
+                <div class="flex justify-start pt-2">
+                    <button type="button" id="addEntryButton" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center p-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        เพิ่มรายการย้อนหลัง
+                    </button>
+                </div>
+
+                <!-- Status and Submit Button -->
+                <div class="flex flex-col items-center space-y-3 pt-4 border-t pt-6 mt-6">
+                    <button type="submit" id="submitButton" class="w-full sm:w-1/2 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                        บันทึกรายการเทรดทั้งหมด
+                    </button>
+                    <p id="submissionStatus" class="text-sm font-medium hidden p-2 rounded-lg text-center w-full"></p>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Menu Navigation (for SPA) -->
+        <div id="menuContainer" class="flex space-x-4">
+          <button data-menu-id="home" class="menu-button">Home</button>
+          <button data-menu-id="oee" class="menu-button">OEE</button>
+          <button data-menu-id="login" class="menu-button">Login</button>
+        </div>
+
+        <!-- Content Container (for SPA) -->
+        <div id="contentContainer" class="mt-4">
+          <!-- Dynamic content will be loaded here -->
+        </div>
+
+        <!-- Data Table (for SPA) -->
+        <table id="dataTable" class="table-auto w-full mt-4">
+          <thead>
+            <tr>
+              <th>Column 1</th>
+              <th>Column 2</th>
+              <th>Column 3</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr id="balanceRow">
+              <td colspan="3">Balance: $0</td>
+            </tr>
+          </tbody>
+        </table>
+    </div>
+    <script>
+        // **********************************************
+        // Configuration and Data Mocking (Replace with App Script URLs later)
+        // **********************************************
+        // ** ต้องเปลี่ยนเป็น URL ที่ Deploy แล้วของ Google Apps Script ของคุณ **
+        const APPS_SCRIPT_URL = 'YOUR_DEPLOYED_WEB_APP_URL';
+        
+        // ข้อมูลบัญชีและสินทรัพย์จำลอง (ใช้เพื่อสร้าง Dropdown)
+        const MOCK_ACCOUNTS = [
+            { "Account ID": "405911362", "ชื่อบัญชี": "likit1", "เงินต้นเริ่มต้น (USD)": "1000" },
+            { "Account ID": "107338990", "ชื่อบัญชี": "mega", "เงินต้นเริ่มต้น (USD)": "20" }
+        ];
+
+        const MOCK_ASSETS = [
+            { "Asset ID": "1", "ชื่อสินทรัพย์": "BTC" },
+            { "Asset ID": "2", "ชื่อสินทรัพย์": "XAUU" }
+        ];
+        
+        let entryCounter = 0; // Global counter for unique IDs
+
+        // **********************************************
+        // Utility Functions
+        // **********************************************
+
+        /**
+         * แปลงค่าสตริงเป็นตัวเลขหรือ 0 ถ้าแปลงไม่ได้
+         * @param {string | null | undefined} value - ค่าที่ต้องการแปลง
+         * @returns {number} ค่าตัวเลข
+         */
+        function safeParseFloat(value) {
+            const num = parseFloat(value);
+            return isNaN(num) ? 0 : num;
+        }
+
+        /**
+         * Initializes tab switching functionality.
+         */
+        function setupTabs() {
+            const calculatorTabButton = document.getElementById('tab-calculator');
+            const recorderTabButton = document.getElementById('tab-recorder');
+            const calculatorContent = document.getElementById('content-calculator');
+            const recorderContent = document.getElementById('content-recorder');
+
+            const activateTab = (activeButton, inactiveButton, activeContent, inactiveContent) => {
+                activeButton.classList.add('active');
+                inactiveButton.classList.remove('active');
+                activeContent.classList.remove('hidden');
+                inactiveContent.classList.add('hidden');
+            };
+
+            calculatorTabButton.addEventListener('click', () => {
+                activateTab(calculatorTabButton, recorderTabButton, calculatorContent, recorderContent);
+            });
+
+            recorderTabButton.addEventListener('click', () => {
+                activateTab(recorderTabButton, calculatorTabButton, recorderContent, calculatorContent);
+            });
+        }
+
+        /**
+         * Setup menu navigation for SPA
+         */
+        function setupMenuNavigation() {
+          const menuButtons = document.querySelectorAll('.menu-button');
+          const contentContainer = document.getElementById('contentContainer');
+
+          menuButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              const menuId = button.getAttribute('data-menu-id');
+              
+              // Clear existing content
+              contentContainer.innerHTML = '';
+
+              // Load new content based on menuId
+              if (menuId === 'home') {
+                contentContainer.innerHTML = `<p class="text-center text-gray-500 py-4">Welcome to the Trading Journal & Compound Calculator!</p>`;
+              } else if (menuId === 'oee') {
+                contentContainer.innerHTML = `<p class="text-center text-gray-500 py-4">OEE Content Coming Soon!</p>`;
+              } else if (menuId === 'login') {
+                contentContainer.innerHTML = `<p class="text-center text-gray-500 py-4">Login Functionality Coming Soon!</p>`;
+              }
+            });
+          });
+        }
+
+        // **********************************************
+        // Trade Recording Logic (doPost)
+        // **********************************************
+
+        /**
+         * สร้าง HTML สำหรับบล็อกบันทึกรายการเทรดเดียว
+         * @param {number} index - Index ของรายการ (ใช้สำหรับ ID ที่ไม่ซ้ำกัน)
+         * @param {string} startBalanceValue - ค่าเริ่มต้นสำหรับ เงินต้นเริ่มต้นวัน
+         * @returns {string} HTML string
+         */
+        function createTradeEntryHTML(index, startBalanceValue = '') {
+            const accountOptions = MOCK_ACCOUNTS.map(acc => 
+                `<option value="${acc['Account ID']}">${acc['ชื่อบัญชี']} (${acc['Account ID']})</option>`
+            ).join('');
+
+            const assetOptions = MOCK_ASSETS.map(asset => 
+                `<option value="${asset['Asset ID']}">${asset['ชื่อสินทรัพย์']}</option>`
+            ).join('');
+
+            return `
+            <div class="trade-entry-block p-4 border border-gray-300 rounded-lg shadow-sm bg-white" data-index="${index}">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-md font-semibold text-gray-800">รายการเทรด #${index + 1}</h3>
+                    <button type="button" class="remove-entry-button text-red-500 hover:text-red-700 text-sm font-medium focus:outline-none ${index === 0 ? 'hidden' : ''}">
+                        ลบรายการ
+                    </button>
+                </div>
+                
+                <!-- Account and Asset Selection -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">บัญชีเทรด:</label>
+                        <select name="accountId" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm trade-input">
+                            ${accountOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">สินทรัพย์:</label>
+                        <select name="assetId" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm trade-input">
+                            ${assetOptions}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Balance and Profit Input -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">เงินต้นเริ่มต้นวัน (USD):</label>
+                        <input type="number" name="startBalance" step="0.01" required 
+                               value="${startBalanceValue}" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-gray-50 trade-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">กำไร/ขาดทุนรายวัน (USD):</label>
+                        <input type="number" name="dailyProfit" step="0.01" required value="" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 trade-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">เงินรวมสิ้นวัน (USD):</label>
+                        <input type="text" name="endBalance" readonly value="" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 bg-blue-100 font-bold text-gray-800">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Lot Size:</label>
+                        <input type="number" name="lotSize" step="0.01" required value="0.01" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 trade-input">
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">หมายเหตุ:</label>
+                    <textarea name="notes" rows="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 trade-input" placeholder="บันทึกกลยุทธ์, สภาวะตลาด, หรือรายละเอียดอื่น ๆ"></textarea>
+                </div>
+            </div>
+            `;
+        }
+
+        /**
+         * คำนวณยอดรวมสิ้นวัน และอัปเดตยอดเริ่มต้นของรายการถัดไป
+         * @param {HTMLElement} entryBlock - บล็อกรายการเทรดปัจจุบัน
+         */
+        function updateBalances(entryBlock) {
+            const startBalanceInput = entryBlock.querySelector('[name="startBalance"]');
+            const dailyProfitInput = entryBlock.querySelector('[name="dailyProfit"]');
+            const endBalanceInput = entryBlock.querySelector('[name="endBalance"]');
+
+            const startBalance = safeParseFloat(startBalanceInput.value);
+            const dailyProfit = safeParseFloat(dailyProfitInput.value);
+            const endBalance = startBalance + dailyProfit;
+
+            // 1. อัปเดต 'เงินรวมสิ้นวัน' ของรายการปัจจุบัน
+            endBalanceInput.value = endBalance.toFixed(2);
+
+            // 2. อัปเดต 'เงินต้นเริ่มต้นวัน' ของรายการถัดไป
+            const nextEntryBlock = entryBlock.nextElementSibling;
+            if (nextEntryBlock && nextEntryBlock.classList.contains('trade-entry-block')) {
+                const nextStartBalanceInput = nextEntryBlock.querySelector('[name="startBalance"]');
+                if (nextStartBalanceInput) {
+                    nextStartBalanceInput.value = endBalance.toFixed(2);
+                }
+            }
+        }
+
+        /**
+         * เพิ่มบล็อกรายการเทรดใหม่
+         * @param {string} initialStartBalance - ค่าเงินต้นเริ่มต้นที่จะใช้ (จากรายการก่อนหน้า)
+         */
+        function addTradeEntry(initialStartBalance = '') {
+            const container = document.getElementById('tradeEntriesContainer');
+            
+            // ถ้าไม่ใช่รายการแรก ให้คำนวณยอดเริ่มต้นจากรายการสุดท้ายที่มีอยู่
+            if (entryCounter > 0) {
+                const lastEntry = container.lastElementChild;
+                const lastEndBalanceInput = lastEntry ? lastEntry.querySelector('[name="endBalance"]') : null;
+                initialStartBalance = lastEndBalanceInput ? lastEndBalanceInput.value : initialStartBalance;
+            }
+
+            const newEntryHTML = createTradeEntryHTML(entryCounter, initialStartBalance);
+            container.insertAdjacentHTML('beforeend', newEntryHTML);
+            const newEntryBlock = container.lastElementChild;
+
+            // ผูก Event Listener
+            newEntryBlock.querySelectorAll('.trade-input').forEach(input => {
+                // คำนวณยอดใหม่เมื่อมีการเปลี่ยนค่า
+                input.addEventListener('input', () => updateBalances(newEntryBlock));
+            });
+
+            // ปุ่มลบรายการ (ยกเว้นรายการแรก)
+            const removeButton = newEntryBlock.querySelector('.remove-entry-button');
+            if (removeButton) {
+                removeButton.addEventListener('click', () => {
+                    newEntryBlock.remove();
+                    // อัปเดต Balances เพื่อให้รายการที่ตามมาคำนวณใหม่
+                    const nextEntry = container.firstElementChild;
+                    if (nextEntry) {
+                        updateBalances(nextEntry);
+                    }
+                });
+            }
+            
+            // คำนวณยอดทันทีเมื่อสร้างเสร็จ
+            updateBalances(newEntryBlock);
+
+            entryCounter++;
+        }
+
+        /**
+         * วนลูปเก็บข้อมูลจากทุกรายการ และส่งไปยัง App Script ทีละรายการ
+         */
+        async function postTradeData(event) {
+            event.preventDefault();
+            const submitButton = document.getElementById('submitButton');
+            const statusMessage = document.getElementById('submissionStatus');
+            const container = document.getElementById('tradeEntriesContainer');
+            const tradeEntryBlocks = container.querySelectorAll('.trade-entry-block');
+            
+            if (tradeEntryBlocks.length === 0) {
+                statusMessage.textContent = '❌ ไม่มีรายการเทรดให้บันทึก';
+                statusMessage.classList.remove('hidden', 'text-green-600');
+                statusMessage.classList.add('text-red-500', 'bg-red-100');
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = `กำลังบันทึก 0/${tradeEntryBlocks.length} รายการ...`;
+            statusMessage.classList.add('hidden');
+
+            let successfulSubmissions = 0;
+            const errors = [];
+            
+            if (APPS_SCRIPT_URL === 'YOUR_DEPLOYED_WEB_APP_URL') {
+                statusMessage.textContent = "❌ กรุณาเปลี่ยน APPS_SCRIPT_URL ในโค้ดก่อนใช้งานจริง";
+                statusMessage.classList.remove('hidden', 'text-green-600');
+                statusMessage.classList.add('text-red-500', 'bg-red-100');
+                submitButton.disabled = false;
+                submitButton.textContent = 'บันทึกรายการเทรดทั้งหมด';
+                return;
+            }
+
+            for (let i = 0; i < tradeEntryBlocks.length; i++) {
+                const block = tradeEntryBlocks[i];
+                try {
+                    // รวบรวมข้อมูลจากบล็อกปัจจุบัน
+                    const data = {
+                        accountId: block.querySelector('[name="accountId"]').value,
+                        assetId: block.querySelector('[name="assetId"]').value,
+                        startBalance: block.querySelector('[name="startBalance"]').value,
+                        dailyProfit: block.querySelector('[name="dailyProfit"]').value,
+                        lotSize: block.querySelector('[name="lotSize"]').value,
+                        notes: block.querySelector('[name="notes"]').value,
+                    };
+
+                    const urlSearchParams = new URLSearchParams(data);
+
+                    const response = await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        body: urlSearchParams, 
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        successfulSubmissions++;
+                        // ทำเครื่องหมายว่ารายการนี้สำเร็จ (เช่น ซ่อนหรือเปลี่ยนสี)
+                        block.style.borderColor = '#34D399'; // border-green-400
+                    } else {
+                        errors.push(`รายการ #${i + 1}: ${result.message}`);
+                        block.style.borderColor = '#EF4444'; // border-red-500
+                    }
+
+                } catch (error) {
+                    errors.push(`รายการ #${i + 1}: ข้อผิดพลาดทางเทคนิค (${error.message})`);
+                    block.style.borderColor = '#EF4444'; // border-red-500
+                    console.error(`Error posting data for entry ${i + 1}:`, error);
+                } finally {
+                    submitButton.textContent = `กำลังบันทึก ${successfulSubmissions}/${tradeEntryBlocks.length} รายการ...`;
+                }
+            }
+
+            // แสดงผลสรุป
+            if (errors.length === 0) {
+                statusMessage.textContent = `✅ บันทึกสำเร็จทั้งหมด ${successfulSubmissions} รายการ!`;
+                statusMessage.classList.remove('hidden', 'text-red-500', 'bg-red-100');
+                statusMessage.classList.add('text-green-600', 'bg-green-100');
+                // ล้างฟอร์มทั้งหมดหลังบันทึกสำเร็จ
+                container.innerHTML = '';
+                entryCounter = 0;
+                addTradeEntry(); // เพิ่มรายการแรกกลับมา
+            } else {
+                statusMessage.textContent = `⚠️ บันทึกสำเร็จ ${successfulSubmissions} รายการ, ผิดพลาด ${errors.length} รายการ: ${errors.join(' | ')}`;
+                statusMessage.classList.remove('hidden', 'text-green-600', 'bg-green-100');
+                statusMessage.classList.add('text-yellow-600', 'bg-yellow-100');
+            }
+            
+            submitButton.disabled = false;
+            submitButton.textContent = 'บันทึกรายการเทรดทั้งหมด';
+        }
+        
+        // **********************************************
+        // Compound Calculator Logic (Code from previous version)
+        // **********************************************
+        let compoundingChart = null; // Reference to the chart instance
+
+        function generateYearlySummaryTable(initialCapitalUSD) {
+            // ฟังก์ชันนี้มีไว้เพื่อป้องกัน ReferenceError และอาจถูกนำไปใช้เพื่อแสดงตารางสรุปรายปีในภายหลัง
+        }
+        
+        function generateDailyTradingTable(initialCapitalUSD) {
+            // ฟังก์ชันนี้มีไว้เพื่อป้องกัน ReferenceError และอาจถูกนำไปใช้เพื่อแสดงตารางจำลองรายวันในภายหลัง
+        }
+
+        function updateChartAndSummary() {
+            const dailyRate = 0.01;
+            const initialCapitalInput = document.getElementById('initialCapitalInput');
+            const initialCapitalDisplay = document.getElementById('initialCapitalDisplay');
+            const summaryInitialCapital = document.getElementById('summaryInitialCapital');
+            const yearInput = document.getElementById('yearInput');
+            const exchangeRateInput = document.getElementById('exchangeRateInput');
+            const durationDisplay = document.getElementById('durationDisplay');
+            const finalAmountElement = document.getElementById('finalAmount');
+            const netProfitElement = document.getElementById('netProfit');
+            const ctx = document.getElementById('compoundingChart').getContext('2d');
+            const capitalWarning = document.getElementById('capitalWarning');
+
+            const rawInitialCapital = parseFloat(initialCapitalInput.value);
+            
+            if (rawInitialCapital < 100) {
+                capitalWarning.classList.remove('hidden');
+            } else {
+                capitalWarning.classList.add('hidden');
+            }
+
+            const initialCapitalUSD = Math.max(100, rawInitialCapital || 100);
+            
+            initialCapitalDisplay.textContent = `$${initialCapitalUSD.toFixed(2)}`;
+            summaryInitialCapital.textContent = `$${initialCapitalUSD.toFixed(2)}`;
+            
+            const years = parseInt(yearInput.value) || 0;
+            const totalDays = years * 365;
+            const exchangeRate = parseFloat(exchangeRateInput.value) || 0;
+            
+            durationDisplay.textContent = `${years} ปี (${totalDays} วัน)`;
+
+            const labels = [];
+            const dataPoints = [];
+            let currentBalanceUSD = initialCapitalUSD;
+
+            for (let day = 0; day <= totalDays; day++) {
+                if (day % 30 === 0 || day === totalDays) {
+                    const currentBalanceTHB = currentBalanceUSD * exchangeRate;
+                    labels.push(`วันที่ ${day}`);
+                    dataPoints.push(parseFloat(currentBalanceTHB.toFixed(2)));
+                }
+
+                if (day < totalDays) {
+                    currentBalanceUSD *= (1 + dailyRate);
+                }
+            }
+            
+            const finalAmountTHB = dataPoints[dataPoints.length - 1];
+            const netProfitTHB = finalAmountTHB - (initialCapitalUSD * exchangeRate);
+
+            finalAmountElement.textContent = `฿${finalAmountTHB.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+            netProfitElement.textContent = `฿${netProfitTHB.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+
+            if (compoundingChart) {
+                compoundingChart.destroy();
+            }
+
+            compoundingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'ยอดเงินรวม (บาท)',
+                        data: dataPoints,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: 'start',
+                        tension: 0.2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'กราฟแสดงการเติบโตแบบทวีคูณ (Exponential Growth)',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#374151'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'ยอดเงิน (บาท)'
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', notation: 'compact', compactDisplay: 'short' }).format(value);
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'วัน'
+                            }
+                        }
+                    }
+                });
+            
+            // Re-run table generation (even if hidden)
+            generateYearlySummaryTable(initialCapitalUSD);
+            generateDailyTradingTable(initialCapitalUSD);
+        }
+        
+        // **********************************************
+        // Authentication and User Management
+        // **********************************************
+        
+        async function checkAuthentication() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
+                // Redirect to login if no token
+                window.location.href = 'index.html';
+                return false;
+            }
+            
+            try {
+                // Display user info
+                const userData = JSON.parse(user);
+                document.getElementById('userDisplayName').textContent = userData.fullName || userData.id;
+                document.getElementById('userRole').textContent = `(${userData.role})`;
+                
+                // Fetch current balance
+                await fetchCurrentBalance(token, userData.id);
+                
+                return true;
+            } catch (error) {
+                console.error('Authentication check failed:', error);
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = 'index.html';
+                return false;
+            }
+        }
+        
+        async function fetchCurrentBalance(token, userId) {
+            try {
+                const response = await fetch(`${APPS_SCRIPT_URL}?action=getAccountSummary&token=${token}&accountId=${userId}`, {
+                    method: 'GET'
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success' && result.data) {
+                    const balance = result.data.currentBalance || 0;
+                    document.getElementById('currentBalance').textContent = `$${balance.toFixed(2)}`;
+                } else {
+                    document.getElementById('currentBalance').textContent = '$0.00';
+                }
+            } catch (error) {
+                console.error('Error fetching balance:', error);
+                document.getElementById('currentBalance').textContent = '$0.00';
+            }
+        }
+        
+        function logout() {
+            const token = localStorage.getItem('token');
+            
+            // Call logout API (optional)
+            if (token) {
+                fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        action: 'logout',
+                        token: token
+                    })
+                }).catch(error => console.error('Logout API error:', error));
+            }
+            
+            // Clear local storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            
+            // Redirect to login
+            window.location.href = 'index.html';
+        }
+        
+        // **********************************************
+        // Initialization
+        // **********************************************
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication first
+            const isAuthenticated = await checkAuthentication();
+            if (!isAuthenticated) return;
+            
+            // Setup logout button
+            document.getElementById('logoutButton').addEventListener('click', logout);
+            
+            setupTabs();
+            
+            // Setup for Trade Recorder
+            const addEntryButton = document.getElementById('addEntryButton');
+            addEntryButton.addEventListener('click', () => addTradeEntry());
+            
+            // MUST show the first entry when the page loads
+            addTradeEntry(); 
+
+            // Set up event listener for Trade Form
+            document.getElementById('tradeForm').addEventListener('submit', postTradeData);
+
+            // Set up event listeners for Calculator
+            const initialCapitalInput = document.getElementById('initialCapitalInput');
+            const yearInput = document.getElementById('yearInput');
+            const exchangeRateInput = document.getElementById('exchangeRateInput');
+            
+            initialCapitalInput.addEventListener('input', updateChartAndSummary);
+            yearInput.addEventListener('input', updateChartAndSummary);
+            exchangeRateInput.addEventListener('input', updateChartAndSummary);
+
+            // Initial render for Calculator
+            updateChartAndSummary();
+
+            // Setup menu navigation
+            setupMenuNavigation();
+        });
+    </script>
+</body>
+</html>

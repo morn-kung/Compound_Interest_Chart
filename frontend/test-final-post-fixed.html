@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final POST Test - Code Fixed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🎯 Final POST Test - Code Fixed</h1>
+        
+        <div class="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
+            <h2 class="font-semibold">✅ Code.js Status:</h2>
+            <ul class="list-disc ml-6 mt-2 text-sm">
+                <li>✅ publicEndpoints array updated (lines 109-119)</li>
+                <li>✅ debugPOST endpoint implemented (lines 408-441)</li>
+                <li>✅ Enhanced parameter extraction with getParam()</li>
+                <li>✅ Detailed login debugging added</li>
+            </ul>
+        </div>
+        
+        <!-- Test Buttons -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🧪 Final Tests</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Username:</label>
+                    <input type="text" id="username" value="4498" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password:</label>
+                    <input type="text" id="password" value="likit.se4498" class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button onclick="testPOSTDebug()" class="bg-yellow-600 text-white px-4 py-3 rounded hover:bg-yellow-700">
+                    🔍 POST Debug
+                </button>
+                <button onclick="testPOSTLogin()" class="bg-red-600 text-white px-4 py-3 rounded hover:bg-red-700 font-bold">
+                    🔥 POST Login
+                </button>
+                <button onclick="testGETEndpoint()" class="bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700">
+                    ✅ GET Test
+                </button>
+                <button onclick="testAllFlow()" class="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700 font-bold">
+                    🚀 Full Flow
+                </button>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📊 Test Results</h2>
+            <div id="results" class="bg-gray-50 p-4 rounded text-xs font-mono h-96 overflow-y-auto whitespace-pre">
+Ready to test fixed deployment...
+            </div>
+        </div>
+        
+        <!-- Success Indicator -->
+        <div id="successBanner" class="hidden bg-green-500 text-white p-6 rounded-lg shadow mt-6 text-center">
+            <h2 class="text-2xl font-bold mb-2">🎉 SUCCESS!</h2>
+            <p class="text-lg">POST Login is now working! You can now use the main application.</p>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt/exec';
+        
+        function addResult(title, data, isSuccess = false) {
+            const resultsDiv = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const content = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n${'='.repeat(50)}\n\n`;
+            resultsDiv.textContent = content + resultsDiv.textContent;
+            
+            if (isSuccess) {
+                document.getElementById('successBanner').classList.remove('hidden');
+            }
+        }
+        
+        // Test POST Debug
+        async function testPOSTDebug() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'debugPOST',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                addResult('🔍 POST Debug Test', data);
+                
+                // Detailed analysis
+                if (data.status === 'debug') {
+                    const extract = data.debug?.extractionTest;
+                    if (extract?.username === '4498' && extract?.password === '[PROVIDED]') {
+                        addResult('✅ Parameter Extraction Analysis', {
+                            status: 'WORKING PERFECTLY',
+                            message: 'All parameters extracted correctly',
+                            nextStep: 'Parameter extraction is not the issue'
+                        });
+                    } else {
+                        addResult('❌ Parameter Extraction Analysis', {
+                            status: 'ISSUE FOUND',
+                            received: extract,
+                            expected: { username: '4498', password: '[PROVIDED]' }
+                        });
+                    }
+                } else {
+                    addResult('❌ debugPOST Endpoint Issue', {
+                        status: 'UNEXPECTED RESPONSE',
+                        received: data,
+                        expected: 'debug status'
+                    });
+                }
+                
+            } catch (error) {
+                addResult('💥 POST Debug Error', { error: error.message });
+            }
+        }
+        
+        // Test POST Login
+        async function testPOSTLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    addResult('🎉 POST Login SUCCESS!', {
+                        status: 'LOGIN WORKING!',
+                        user: data.user?.name,
+                        token: data.token ? 'Generated' : 'Not generated',
+                        message: 'POST login issue is now FIXED!'
+                    }, true);
+                    
+                    // Store token for further testing
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    
+                } else {
+                    addResult('❌ POST Login Still Failing', {
+                        status: 'STILL FAILING',
+                        message: data.message,
+                        debug: data.debug || 'No debug info',
+                        timestamp: data.timestamp
+                    });
+                    
+                    // Analysis
+                    if (data.debug && data.debug.parameterExtraction) {
+                        addResult('🔍 Parameter Extraction Check', data.debug.parameterExtraction);
+                    }
+                }
+                
+            } catch (error) {
+                addResult('💥 POST Login Error', { error: error.message });
+            }
+        }
+        
+        // Test GET endpoint (should work)
+        async function testGETEndpoint() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testLoginStepByStep');
+                url.searchParams.set('username', username);
+                url.searchParams.set('password', password);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    addResult('✅ GET Test Working', {
+                        status: 'GET AUTHENTICATION WORKS',
+                        user: data.user?.name,
+                        message: 'Authentication logic is correct'
+                    });
+                } else if (data.status === 'error' && data.message.includes('Token is required')) {
+                    addResult('❌ GET Test - Auth Required', {
+                        status: 'STILL NEEDS AUTH',
+                        message: 'publicEndpoints may not be applied yet',
+                        suggestion: 'Wait a few minutes or try cache refresh'
+                    });
+                } else {
+                    addResult('⚠️ GET Test Unexpected', data);
+                }
+                
+            } catch (error) {
+                addResult('💥 GET Test Error', { error: error.message });
+            }
+        }
+        
+        // Test full authentication flow
+        async function testAllFlow() {
+            addResult('🚀 Starting Full Flow Test', { message: 'Testing complete authentication flow...' });
+            
+            // Step 1: POST Debug
+            await testPOSTDebug();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Step 2: POST Login
+            await testPOSTLogin();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Step 3: Test authenticated endpoint if login succeeded
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                try {
+                    const response = await fetch(`${GAS_URL}?action=getUserInfo&token=${token}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        addResult('🎉 Authenticated Endpoint Working', {
+                            status: 'FULL FLOW SUCCESS',
+                            message: 'Login and authentication both working!'
+                        });
+                    } else {
+                        addResult('⚠️ Authentication Issue', data);
+                    }
+                } catch (error) {
+                    addResult('💥 Authenticated Test Error', { error: error.message });
+                }
+            }
+            
+            addResult('✅ Full Flow Test Complete', { 
+                message: 'Check results above for final status',
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🎯 Final POST Test Ready', {
+                message: 'Code.js has been verified and updated',
+                codeStatus: 'All necessary changes are in place',
+                nextStep: 'Run tests to verify deployment propagation'
+            });
+        });
+    </script>
+</body>
+</html>

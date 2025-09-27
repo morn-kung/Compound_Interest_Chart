@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Login Process</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">🐛 Debug Login Process Step by Step</h1>
+        
+        <!-- Debug Steps -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Step 1: Check GAS Functions -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">🔧 Step 1: Check GAS Functions</h2>
+                <div class="space-y-2">
+                    <button onclick="testGetAccounts()" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        📊 Test getAccounts (Public)
+                    </button>
+                    <button onclick="testValidateSheets()" class="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                        🔍 Test validateSheets
+                    </button>
+                    <button onclick="testGetAllSheets()" class="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                        📋 Test getAllSheets
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Custom Login Debug -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">🔐 Step 2: Custom Login Debug</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Username:</label>
+                        <input type="text" id="debugUsername" value="4498" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Password:</label>
+                        <input type="text" id="debugPassword" value="likit.se4498" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <button onclick="debugLogin()" class="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                        🐛 Debug Login Process
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAS URL Config -->
+        <div class="bg-white p-6 rounded-lg shadow mt-6">
+            <h2 class="text-lg font-semibold mb-4">🌐 GAS Configuration</h2>
+            <div>
+                <label class="block text-sm font-medium mb-1">GAS URL:</label>
+                <input type="text" id="gasUrl" 
+                       value="https://script.google.com/macros/s/AKfycbw4MK7BupKGaWI92A05pkHU8j5gGs2Krls7K4oEaqUEAuIR-xOi26TZw-58s3rBZKgo/exec"
+                       class="w-full border rounded px-3 py-2 text-xs">
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white p-6 rounded-lg shadow mt-6">
+            <h2 class="text-lg font-semibold mb-4">📋 Debug Results</h2>
+            <div id="results" class="space-y-4 max-h-96 overflow-y-auto">
+                <p class="text-gray-500">Click any button above to start debugging...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gasUrl = () => document.getElementById('gasUrl').value;
+        
+        async function testGetAccounts() {
+            clearResults();
+            addResult('🔄 Testing getAccounts...', 'info');
+            
+            try {
+                const response = await fetch(`${gasUrl()}?action=getAccounts`);
+                const result = await response.json();
+                
+                addResult('✅ getAccounts Response:', 'success');
+                addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(result, null, 2)}</pre>`, 'success');
+                
+                if (result.status === 'success' && result.data && result.data.accounts) {
+                    addResult(`📊 Found ${result.data.accounts.length} accounts`, 'success');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testValidateSheets() {
+            clearResults();
+            addResult('🔄 Testing sheet validation...', 'info');
+            
+            try {
+                // This might require admin token, but let's try
+                const response = await fetch(`${gasUrl()}?action=validateSheets&token=test`);
+                const result = await response.json();
+                
+                addResult('🔍 Sheet Validation Response:', 'info');
+                addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(result, null, 2)}</pre>`, 'info');
+                
+            } catch (error) {
+                addResult(`❌ Validation Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testGetAllSheets() {
+            clearResults();
+            addResult('🔄 Testing get all sheets...', 'info');
+            
+            try {
+                const response = await fetch(`${gasUrl()}?action=getAllSheets&token=test`);
+                const result = await response.json();
+                
+                addResult('📋 All Sheets Response:', 'info');
+                addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(result, null, 2)}</pre>`, 'info');
+                
+            } catch (error) {
+                addResult(`❌ Sheets Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function debugLogin() {
+            clearResults();
+            const username = document.getElementById('debugUsername').value;
+            const password = document.getElementById('debugPassword').value;
+            
+            addResult('🐛 Starting detailed login debug...', 'info');
+            addResult(`👤 Username: ${username}`, 'info');
+            addResult(`🔑 Password: ${password}`, 'info');
+            
+            try {
+                // Step 1: Test with different parameter formats
+                addResult('🔬 Step 1: Testing different parameter formats...', 'info');
+                
+                // Format 1: URLSearchParams
+                const format1Data = new URLSearchParams({
+                    action: 'login',
+                    username: username,
+                    password: password
+                });
+                
+                addResult(`📤 Format 1 (URLSearchParams): ${format1Data.toString()}`, 'info');
+                
+                const response1 = await fetch(gasUrl(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: format1Data
+                });
+                
+                const result1 = await response1.json();
+                addResult(`📥 Format 1 Result: ${JSON.stringify(result1)}`, result1.status === 'success' ? 'success' : 'error');
+                
+                // Step 2: Test with different username formats
+                addResult('🔬 Step 2: Testing different username formats...', 'info');
+                
+                const testUsernames = [
+                    username,                           // "4498"
+                    parseInt(username),                 // 4498 (number)
+                    username.toString(),                // "4498" (explicit string)
+                    `EmpId_${username}`,               // "EmpId_4498"
+                    `user_${username}`                 // "user_4498"
+                ];
+                
+                for (let i = 0; i < testUsernames.length; i++) {
+                    const testUsername = testUsernames[i];
+                    addResult(`🔄 Testing username format ${i + 1}: ${testUsername} (${typeof testUsername})`, 'info');
+                    
+                    const testData = new URLSearchParams({
+                        action: 'login',
+                        username: testUsername,
+                        password: password
+                    });
+                    
+                    const testResponse = await fetch(gasUrl(), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: testData
+                    });
+                    
+                    const testResult = await testResponse.json();
+                    addResult(`📥 Username ${testUsername}: ${testResult.message}`, testResult.status === 'success' ? 'success' : 'error');
+                    
+                    if (testResult.status === 'success') {
+                        addResult('🎉 FOUND WORKING USERNAME FORMAT!', 'success');
+                        break;
+                    }
+                }
+                
+                // Step 3: Test with email as username
+                addResult('🔬 Step 3: Testing with email as username...', 'info');
+                
+                const emailUsername = 'likit.se@irpc.co.th';
+                const emailData = new URLSearchParams({
+                    action: 'login',
+                    username: emailUsername,
+                    password: password
+                });
+                
+                const emailResponse = await fetch(gasUrl(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: emailData
+                });
+                
+                const emailResult = await emailResponse.json();
+                addResult(`📥 Email Username Result: ${JSON.stringify(emailResult)}`, emailResult.status === 'success' ? 'success' : 'error');
+                
+                // Step 4: Test with hashed password
+                addResult('🔬 Step 4: Testing with hashed password...', 'info');
+                
+                const hashedPassword = await sha256('likit.se4498');
+                addResult(`🔐 Generated hash: ${hashedPassword}`, 'info');
+                
+                const hashData = new URLSearchParams({
+                    action: 'login',
+                    username: username,
+                    password: hashedPassword
+                });
+                
+                const hashResponse = await fetch(gasUrl(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: hashData
+                });
+                
+                const hashResult = await hashResponse.json();
+                addResult(`📥 Hashed Password Result: ${JSON.stringify(hashResult)}`, hashResult.status === 'success' ? 'success' : 'error');
+                
+            } catch (error) {
+                addResult(`💥 Debug Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // SHA-256 function
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            
+            const colors = {
+                info: 'text-blue-600 border-blue-400 bg-blue-50',
+                success: 'text-green-600 border-green-400 bg-green-50',
+                error: 'text-red-600 border-red-400 bg-red-50'
+            };
+            
+            div.className = `p-2 border-l-4 ${colors[type]} mb-2`;
+            div.innerHTML = message;
+            
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        // Auto-run basic tests on load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Debug page loaded. Ready to test GAS connectivity.');
+        });
+    </script>
+</body>
+</html>

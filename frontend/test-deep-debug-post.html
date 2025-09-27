@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Debug POST Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🔬 Deep Debug POST Login</h1>
+        
+        <div class="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
+            <h2 class="font-semibold">🚨 Current Issue:</h2>
+            <p>POST login still returns "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" even after fixing parameter extraction.</p>
+            <p>Need to debug what exactly is happening in the server-side authentication process.</p>
+        </div>
+        
+        <!-- Test Controls -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🎛️ Debug Controls</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Username:</label>
+                    <input type="text" id="username" value="4498" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password:</label>
+                    <input type="text" id="password" value="likit.se4498" class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+            <div class="flex gap-4 flex-wrap">
+                <button onclick="testPOSTLogin()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                    🔴 POST Login (Failing)
+                </button>
+                <button onclick="testGETStepByStep()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    ✅ GET Step by Step (Working)
+                </button>
+                <button onclick="testGETFindUser()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    🔍 GET Find User
+                </button>
+                <button onclick="testGETVerifyPassword()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                    🔐 GET Verify Password
+                </button>
+                <button onclick="testPOSTDifferentParams()" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">
+                    🧪 POST Different Params
+                </button>
+                <button onclick="testPOSTDebug()" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+                    🔍 POST Debug
+                </button>
+                <button onclick="testGETFullDebug()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                    🚀 GET Full Debug
+                </button>
+                <button onclick="clearResults()" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                    🗑️ Clear
+                </button>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left Column: Test Results -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">📋 Test Results</h2>
+                <div id="results" class="space-y-4 max-h-96 overflow-y-auto text-sm">
+                    <p class="text-gray-500">Click a test to see results...</p>
+                </div>
+            </div>
+            
+            <!-- Right Column: Raw API Responses -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">🔧 Raw API Responses</h2>
+                <div id="rawResponses" class="bg-gray-50 p-4 rounded text-xs font-mono h-96 overflow-y-auto whitespace-pre">
+Waiting for API responses...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt/exec';
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            
+            const colors = {
+                info: 'text-blue-600 border-blue-400 bg-blue-50',
+                success: 'text-green-600 border-green-400 bg-green-50',
+                error: 'text-red-600 border-red-400 bg-red-50',
+                warning: 'text-yellow-600 border-yellow-400 bg-yellow-50'
+            };
+            
+            div.className = `p-3 border-l-4 ${colors[type]} mb-2 rounded-r`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        function addRaw(title, data) {
+            const rawDiv = document.getElementById('rawResponses');
+            const timestamp = new Date().toLocaleTimeString();
+            const content = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n${'='.repeat(50)}\n\n`;
+            rawDiv.textContent = content + rawDiv.textContent;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '<p class="text-gray-500">Cleared...</p>';
+            document.getElementById('rawResponses').textContent = 'Cleared...\n';
+        }
+        
+        function getUsername() { return document.getElementById('username').value; }
+        function getPassword() { return document.getElementById('password').value; }
+        
+        // Test POST Login (the failing one)
+        async function testPOSTLogin() {
+            const username = getUsername();
+            const password = getPassword();
+            
+            addResult('🔴 Testing POST Login (the one that fails)...', 'warning');
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                addRaw('POST Login', data);
+                
+                if (data.status === 'success') {
+                    addResult('✅ POST Login worked!', 'success');
+                } else {
+                    addResult(`❌ POST Login failed: ${data.message}`, 'error');
+                    if (data.debug) {
+                        addResult(`🔍 Debug info: ${JSON.stringify(data.debug)}`, 'info');
+                    }
+                }
+                
+            } catch (error) {
+                addResult(`💥 POST Login error: ${error.message}`, 'error');
+                addRaw('POST Error', { error: error.message });
+            }
+        }
+        
+        // Test GET Step by Step (the working one)
+        async function testGETStepByStep() {
+            const username = getUsername();
+            const password = getPassword();
+            
+            addResult('✅ Testing GET Step by Step (should work)...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testLoginStepByStep');
+                url.searchParams.set('username', username);
+                url.searchParams.set('password', password);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('GET Step by Step', data);
+                
+                if (data.status === 'success') {
+                    addResult('✅ GET Step by Step worked!', 'success');
+                    addResult(`👤 User: ${data.user?.name || 'Unknown'}`, 'success');
+                    addResult(`🎫 Token: ${data.token ? '[Generated]' : '[None]'}`, 'success');
+                } else {
+                    addResult(`❌ GET Step by Step failed: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`💥 GET Step by Step error: ${error.message}`, 'error');
+                addRaw('GET Error', { error: error.message });
+            }
+        }
+        
+        // Test GET Find User
+        async function testGETFindUser() {
+            const username = getUsername();
+            
+            addResult('🔍 Testing GET Find User...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testFindUser');
+                url.searchParams.set('username', username);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('GET Find User', data);
+                
+                if (data.status === 'success' && data.user) {
+                    addResult(`✅ User found: ${data.user.name} (${data.user.email})`, 'success');
+                } else {
+                    addResult(`❌ User not found or error: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`💥 GET Find User error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test GET Verify Password
+        async function testGETVerifyPassword() {
+            const username = getUsername();
+            const password = getPassword();
+            
+            addResult('🔐 Testing GET Verify Password...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testVerifyPassword');
+                url.searchParams.set('username', username);
+                url.searchParams.set('password', password);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('GET Verify Password', data);
+                
+                if (data.passwordMatches === true) {
+                    addResult('✅ Password verification successful!', 'success');
+                } else {
+                    addResult(`❌ Password verification failed`, 'error');
+                    if (data.debug) {
+                        addResult(`🔍 Debug: ${JSON.stringify(data.debug)}`, 'info');
+                    }
+                }
+                
+            } catch (error) {
+                addResult(`💥 GET Verify Password error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test POST with different parameter formats
+        async function testPOSTDifferentParams() {
+            const username = getUsername();
+            const password = getPassword();
+            
+            addResult('🧪 Testing POST with different parameter formats...', 'warning');
+            
+            // Test 1: Regular form data
+            try {
+                addResult('📝 Test 1: Standard form data...', 'info');
+                const response1 = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                const data1 = await response1.json();
+                addRaw('POST Test 1 (Form)', data1);
+                addResult(`Test 1 result: ${data1.status}`, data1.status === 'success' ? 'success' : 'error');
+            } catch (error) {
+                addResult(`Test 1 error: ${error.message}`, 'error');
+            }
+            
+            // Test 2: JSON body
+            try {
+                addResult('📝 Test 2: JSON body...', 'info');
+                const response2 = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                const data2 = await response2.json();
+                addRaw('POST Test 2 (JSON)', data2);
+                addResult(`Test 2 result: ${data2.status}`, data2.status === 'success' ? 'success' : 'error');
+            } catch (error) {
+                addResult(`Test 2 error: ${error.message}`, 'error');
+            }
+            
+            // Test 3: GET with POST action (for comparison)
+            try {
+                addResult('📝 Test 3: GET with login action...', 'info');
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'login');
+                url.searchParams.set('username', username);
+                url.searchParams.set('password', password);
+                
+                const response3 = await fetch(url.toString());
+                const data3 = await response3.json();
+                addRaw('GET Test 3 (Login via GET)', data3);
+                addResult(`Test 3 result: ${data3.status}`, data3.status === 'success' ? 'success' : 'error');
+            } catch (error) {
+                addResult(`Test 3 error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test POST Debug Endpoint
+        async function testPOSTDebug() {
+            const username = getUsername();
+            const password = getPassword();
+            
+            addResult('🔍 Testing POST Debug Endpoint...', 'warning');
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'debugPOST',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                addRaw('POST Debug', data);
+                
+                addResult('✅ POST Debug completed - check Raw API Response', 'success');
+                
+                if (data.debug) {
+                    addResult(`📊 Parameters received: ${data.debug.parametersKeys.join(', ')}`, 'info');
+                    addResult(`🔑 Parameter extraction: ${JSON.stringify(data.debug.extractionTest)}`, 'info');
+                }
+                
+            } catch (error) {
+                addResult(`💥 POST Debug error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test GET Full Debug
+        async function testGETFullDebug() {
+            const username = getUsername();
+            const password = getPassword();
+            
+            addResult('🚀 Testing GET Full Debug...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testLoginWithFullDebug');
+                url.searchParams.set('username', username);
+                url.searchParams.set('password', password);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('GET Full Debug', data);
+                
+                if (data.status === 'success') {
+                    addResult('✅ GET Full Debug - Authentication PASSED!', 'success');
+                } else if (data.status === 'error') {
+                    addResult(`❌ GET Full Debug - Authentication FAILED: ${data.message}`, 'error');
+                } else {
+                    addResult('🔍 GET Full Debug completed - check details', 'info');
+                }
+                
+                if (data.steps) {
+                    data.steps.forEach(step => {
+                        const isError = step.includes('❌') || step.includes('💥');
+                        const isSuccess = step.includes('✅');
+                        addResult(`    ${step}`, isError ? 'error' : isSuccess ? 'success' : 'info');
+                    });
+                }
+                
+            } catch (error) {
+                addResult(`💥 GET Full Debug error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🔬 Deep Debug POST Login ready!', 'info');
+            addResult('💡 Click "POST Debug" to see parameter extraction details', 'info');
+            addResult('💡 Click "GET Full Debug" to see complete authentication process', 'info');
+        });
+    </script>
+</body>
+</html>

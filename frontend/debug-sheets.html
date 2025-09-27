@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Sheet Data - GAS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">🔍 Debug Sheet Data</h1>
+        
+        <!-- Debug Form -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">Check Sheet Data</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">GAS URL:</label>
+                <input type="text" id="gasUrl" 
+                       value="https://script.google.com/macros/s/AKfycbw4MK7BupKGaWI92A05pkHU8j5gGs2Krls7K4oEaqUEAuIR-xOi26TZw-58s3rBZKgo/exec"
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div class="flex gap-4">
+                <button onclick="testGetAccounts()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    📊 Get Accounts Data
+                </button>
+                <button onclick="testUserData()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    👥 Debug User Data
+                </button>
+                <button onclick="testSheetValidation()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                    🔧 Validate Sheets
+                </button>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📋 Debug Results</h2>
+            <div id="results" class="space-y-4">
+                <p class="text-gray-500">Click any button above to start debugging...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gasUrl = () => document.getElementById('gasUrl').value;
+        
+        async function testGetAccounts() {
+            clearResults();
+            addResult('🔄 Testing getAccounts (public endpoint)...', 'info');
+            
+            try {
+                const response = await fetch(`${gasUrl()}?action=getAccounts`);
+                const result = await response.json();
+                
+                addResult('✅ Accounts response:', 'success');
+                addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(result, null, 2)}</pre>`, 'success');
+                
+            } catch (error) {
+                addResult(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testUserData() {
+            clearResults();
+            addResult('🔄 Attempting to debug user data...', 'info');
+            
+            try {
+                // Test with admin token (if available)
+                addResult('📤 Trying to get user validation info...', 'info');
+                
+                const response = await fetch(`${gasUrl()}?action=validateComprehensive`);
+                const result = await response.json();
+                
+                addResult('📥 Validation response:', 'info');
+                addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(result, null, 2)}</pre>`, 'info');
+                
+                // Try getting configured sheets
+                const sheetsResponse = await fetch(`${gasUrl()}?action=getConfiguredSheets`);
+                const sheetsResult = await sheetsResponse.json();
+                
+                addResult('📊 Configured sheets:', 'info');
+                addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(sheetsResult, null, 2)}</pre>`, 'info');
+                
+            } catch (error) {
+                addResult(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testSheetValidation() {
+            clearResults();
+            addResult('🔄 Testing sheet validation...', 'info');
+            
+            try {
+                const response = await fetch(`${gasUrl()}?action=validateSheets`);
+                const result = await response.json();
+                
+                addResult('🔧 Sheet validation result:', 'info');
+                addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(result, null, 2)}</pre>`, 'info');
+                
+                // Also test header validation
+                const headersResponse = await fetch(`${gasUrl()}?action=validateHeaders`);
+                const headersResult = await headersResponse.json();
+                
+                addResult('📋 Headers validation result:', 'info');
+                addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(headersResult, null, 2)}</pre>`, 'info');
+                
+            } catch (error) {
+                addResult(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Manual test for specific user data
+        async function testSpecificUser() {
+            clearResults();
+            addResult('🔄 Testing with hardcoded admin credentials...', 'info');
+            
+            try {
+                // Try with a test admin login to see sheet structure
+                const loginData = new URLSearchParams({
+                    action: 'login',
+                    username: 'admin', // Try common admin username
+                    password: 'admin123' // Try common admin password
+                });
+                
+                const response = await fetch(gasUrl(), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: loginData
+                });
+                
+                const result = await response.json();
+                addResult('🔑 Admin login test result:', 'info');
+                addResult(`<pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${JSON.stringify(result, null, 2)}</pre>`, 'info');
+                
+            } catch (error) {
+                addResult(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            
+            const colors = {
+                info: 'text-blue-600',
+                success: 'text-green-600', 
+                error: 'text-red-600'
+            };
+            
+            div.className = `p-2 border-l-4 ${type === 'error' ? 'border-red-400 bg-red-50' : 
+                                              type === 'success' ? 'border-green-400 bg-green-50' : 
+                                              'border-blue-400 bg-blue-50'} ${colors[type]}`;
+            div.innerHTML = message;
+            
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        // Add manual test button
+        document.addEventListener('DOMContentLoaded', () => {
+            const buttonContainer = document.querySelector('.flex.gap-4');
+            const manualTestButton = document.createElement('button');
+            manualTestButton.onclick = testSpecificUser;
+            manualTestButton.className = 'bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700';
+            manualTestButton.innerHTML = '🔍 Test Admin Login';
+            buttonContainer.appendChild(manualTestButton);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Successful Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🎉 Test Successful Login</h1>
+        
+        <!-- Status Display -->
+        <div id="statusDisplay" class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">📊 Login Status</h2>
+            <div id="loginStatus" class="text-gray-500">Ready to test...</div>
+        </div>
+        
+        <!-- Login Form -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🔑 Login Form</h2>
+            <form id="loginForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Username:</label>
+                        <input type="text" id="username" value="4498" 
+                               class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Password:</label>
+                        <input type="password" id="password" value="likit.se4498" 
+                               class="w-full border rounded px-3 py-2">
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                        🚀 Login
+                    </button>
+                    <button type="button" onclick="testAuthenticatedAPI()" 
+                            class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                        🔐 Test Authenticated API
+                    </button>
+                    <button type="button" onclick="logout()" 
+                            class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700">
+                        🚪 Logout
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- API Response -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📡 API Response</h2>
+            <div id="apiResponse" class="bg-gray-50 p-4 rounded text-sm font-mono h-64 overflow-y-auto">
+                Waiting for API response...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw4MK7BupKGaWI92A05pkHU8j5gGs2Krls7K4oEaqUEAuIR-xOi26TZw-58s3rBZKgo/exec';
+        
+        // Update status display
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('loginStatus');
+            const colors = {
+                info: 'text-blue-600',
+                success: 'text-green-600',
+                error: 'text-red-600'
+            };
+            statusDiv.className = colors[type];
+            statusDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+        }
+        
+        // Update API response display
+        function updateResponse(data, isError = false) {
+            const responseDiv = document.getElementById('apiResponse');
+            responseDiv.className = `p-4 rounded text-sm font-mono h-64 overflow-y-auto ${isError ? 'bg-red-50 text-red-800' : 'bg-gray-50'}`;
+            responseDiv.textContent = JSON.stringify(data, null, 2);
+        }
+        
+        // Login function
+        async function login(username, password) {
+            try {
+                updateStatus('🔄 Logging in...', 'info');
+                
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                updateResponse(data);
+                
+                if (data.status === 'success') {
+                    // Store token
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    
+                    updateStatus(`✅ Login successful! Welcome ${data.user.name}`, 'success');
+                    return data;
+                } else {
+                    updateStatus(`❌ Login failed: ${data.message}`, 'error');
+                    return null;
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ Login error: ${error.message}`, 'error');
+                updateResponse({ error: error.message }, true);
+                return null;
+            }
+        }
+        
+        // Test authenticated API call
+        async function testAuthenticatedAPI() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                updateStatus('❌ No auth token found. Please login first.', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('🔄 Testing authenticated API call...', 'info');
+                
+                const response = await fetch(`${GAS_URL}?action=getDashboardData&token=${token}`, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                updateResponse(data);
+                
+                if (data.status === 'success') {
+                    updateStatus('✅ Authenticated API call successful!', 'success');
+                } else {
+                    updateStatus(`❌ API call failed: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                updateStatus(`❌ API error: ${error.message}`, 'error');
+                updateResponse({ error: error.message }, true);
+            }
+        }
+        
+        // Logout function
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            updateStatus('🚪 Logged out successfully', 'info');
+            updateResponse({ message: 'Logged out' });
+        }
+        
+        // Check if already logged in
+        function checkExistingLogin() {
+            const token = localStorage.getItem('authToken');
+            const user = localStorage.getItem('currentUser');
+            
+            if (token && user) {
+                const userData = JSON.parse(user);
+                updateStatus(`🔐 Already logged in as: ${userData.name}`, 'success');
+                updateResponse({ 
+                    status: 'already_logged_in',
+                    token: token,
+                    user: userData
+                });
+            }
+        }
+        
+        // Form submit handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            await login(username, password);
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStatus('🚀 Ready to test login!', 'info');
+            checkExistingLogin();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final POST Login Debug</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🔬 Final POST Login Debug</h1>
+        
+        <div class="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
+            <h2 class="font-semibold">✅ Deploy Status: WORKING!</h2>
+            <p class="text-sm mt-1">All public endpoints responding. Only POST login still failing.</p>
+        </div>
+        
+        <div class="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
+            <h2 class="font-semibold">❌ Current Issue:</h2>
+            <p class="text-sm mt-1">POST Login returns: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"</p>
+            <p class="text-sm mt-1">Need to debug: Parameter extraction, authentication logic, password verification</p>
+        </div>
+        
+        <!-- Test Buttons -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <button onclick="testGETLogin()" class="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700">
+                ✅ GET Login Test
+            </button>
+            <button onclick="testPOSTLogin()" class="bg-red-600 text-white px-4 py-3 rounded hover:bg-red-700">
+                ❌ POST Login Test
+            </button>
+            <button onclick="testGETUserData()" class="bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700">
+                👥 GET User Data
+            </button>
+            <button onclick="testGETPasswordVerify()" class="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700">
+                🔐 GET Password Verify
+            </button>
+            <button onclick="testPOSTvsGETComparison()" class="bg-orange-600 text-white px-4 py-3 rounded hover:bg-orange-700">
+                🔬 POST vs GET Compare
+            </button>
+            <button onclick="testPOSTDebugEndpoint()" class="bg-yellow-600 text-white px-4 py-3 rounded hover:bg-yellow-700">
+                🔍 POST Debug Endpoint
+            </button>
+            <button onclick="testDirectAuth()" class="bg-indigo-600 text-white px-4 py-3 rounded hover:bg-indigo-700">
+                🎯 Direct Auth Test
+            </button>
+            <button onclick="clearResults()" class="bg-gray-600 text-white px-4 py-3 rounded hover:bg-gray-700">
+                🗑️ Clear
+            </button>
+        </div>
+        
+        <!-- Results Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left: Test Results -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">📊 Test Results</h2>
+                <div id="results" class="space-y-2 max-h-96 overflow-y-auto">
+                    <p class="text-gray-500">Ready to debug POST login issue...</p>
+                </div>
+            </div>
+            
+            <!-- Right: Raw Responses -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">🔧 Raw API Responses</h2>
+                <div id="rawResponses" class="bg-gray-50 p-4 rounded text-xs font-mono h-96 overflow-y-auto whitespace-pre">
+Waiting for API responses...
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analysis -->
+        <div class="bg-white p-6 rounded-lg shadow mt-6">
+            <h2 class="text-lg font-semibold mb-4">🧠 Analysis & Next Steps</h2>
+            <div id="analysis" class="text-sm text-gray-700">
+                Click tests above to start analysis...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt/exec';
+        const USERNAME = '4498';
+        const PASSWORD = 'likit.se4498';
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            
+            const colors = {
+                info: 'text-blue-600 bg-blue-50 border-blue-200',
+                success: 'text-green-600 bg-green-50 border-green-200',
+                error: 'text-red-600 bg-red-50 border-red-200',
+                warning: 'text-yellow-600 bg-yellow-50 border-yellow-200'
+            };
+            
+            div.className = `p-3 border rounded ${colors[type]} text-sm mb-2`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            resultsDiv.insertBefore(div, resultsDiv.firstChild);
+        }
+        
+        function addRaw(title, data) {
+            const rawDiv = document.getElementById('rawResponses');
+            const timestamp = new Date().toLocaleTimeString();
+            const content = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n${'='.repeat(50)}\n\n`;
+            rawDiv.textContent = content + rawDiv.textContent;
+        }
+        
+        function updateAnalysis(message) {
+            const analysisDiv = document.getElementById('analysis');
+            const timestamp = new Date().toLocaleTimeString();
+            analysisDiv.innerHTML += `<div class="mb-2 p-2 bg-gray-100 rounded"><strong>[${timestamp}]</strong> ${message}</div>`;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '<p class="text-gray-500">Cleared...</p>';
+            document.getElementById('rawResponses').textContent = 'Cleared...\n';
+            document.getElementById('analysis').innerHTML = 'Cleared...';
+        }
+        
+        // Test GET Login (working method)
+        async function testGETLogin() {
+            addResult('✅ Testing GET login (should work)...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testLoginStepByStep');
+                url.searchParams.set('username', USERNAME);
+                url.searchParams.set('password', PASSWORD);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('GET Login', data);
+                
+                if (data.status === 'success') {
+                    addResult('✅ GET Login successful!', 'success');
+                    updateAnalysis('✅ GET method works - authentication logic is correct');
+                    return data;
+                } else {
+                    addResult(`❌ GET Login failed: ${data.message}`, 'error');
+                    updateAnalysis('❌ Even GET method failing - check authentication logic');
+                }
+                
+            } catch (error) {
+                addResult(`💥 GET Login error: ${error.message}`, 'error');
+                addRaw('GET Error', { error: error.message });
+            }
+        }
+        
+        // Test POST Login (failing method)
+        async function testPOSTLogin() {
+            addResult('❌ Testing POST login (failing)...', 'warning');
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: USERNAME,
+                        password: PASSWORD
+                    })
+                });
+                
+                const data = await response.json();
+                addRaw('POST Login', data);
+                
+                if (data.status === 'success') {
+                    addResult('🎉 POST Login now working!', 'success');
+                    updateAnalysis('🎉 Problem solved! POST login is now working');
+                } else {
+                    addResult(`❌ POST Login failed: ${data.message}`, 'error');
+                    if (data.debug) {
+                        addResult('🔍 Debug info available in raw response', 'info');
+                        updateAnalysis('🔍 POST fails but has debug info - check parameter extraction');
+                    } else {
+                        updateAnalysis('❌ POST fails without debug info - parameter extraction issue');
+                    }
+                }
+                
+            } catch (error) {
+                addResult(`💥 POST Login error: ${error.message}`, 'error');
+                addRaw('POST Error', { error: error.message });
+            }
+        }
+        
+        // Test GET User Data
+        async function testGETUserData() {
+            addResult('👥 Testing GET user data...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testGetUserData');
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('GET User Data', data);
+                
+                if (data.users && data.users.length > 0) {
+                    addResult(`✅ Found ${data.users.length} users`, 'success');
+                    const user4498 = data.users.find(u => u.empId === '4498');
+                    if (user4498) {
+                        addResult(`👤 User 4498 found: ${user4498.name}`, 'success');
+                        updateAnalysis('✅ User 4498 exists in database - not a data issue');
+                    } else {
+                        addResult('❌ User 4498 not found in database!', 'error');
+                        updateAnalysis('❌ User 4498 missing from database - this is the problem!');
+                    }
+                } else {
+                    addResult('❌ No users found', 'error');
+                    updateAnalysis('❌ No users in database - database connection issue');
+                }
+                
+            } catch (error) {
+                addResult(`💥 GET User Data error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test GET Password Verify
+        async function testGETPasswordVerify() {
+            addResult('🔐 Testing GET password verification...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testVerifyPassword');
+                url.searchParams.set('username', USERNAME);
+                url.searchParams.set('password', PASSWORD);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('GET Password Verify', data);
+                
+                if (data.passwordMatches === true) {
+                    addResult('✅ Password verification successful!', 'success');
+                    updateAnalysis('✅ Password hashing and verification logic is correct');
+                } else {
+                    addResult('❌ Password verification failed', 'error');
+                    updateAnalysis('❌ Password verification issue - check hash generation');
+                }
+                
+            } catch (error) {
+                addResult(`💥 Password verify error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test POST Debug Endpoint
+        async function testPOSTDebugEndpoint() {
+            addResult('🔍 Testing POST debug endpoint...', 'warning');
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'debugPOST',
+                        username: USERNAME,
+                        password: PASSWORD
+                    })
+                });
+                
+                const data = await response.json();
+                addRaw('POST Debug', data);
+                
+                addResult('🔍 POST debug completed - check raw response', 'info');
+                
+                if (data.debug && data.debug.extractionTest) {
+                    const extract = data.debug.extractionTest;
+                    if (extract.username && extract.password) {
+                        addResult('✅ Parameter extraction working', 'success');
+                        updateAnalysis('✅ Parameters extracted correctly - issue is in authentication logic');
+                    } else {
+                        addResult('❌ Parameter extraction failing', 'error');
+                        updateAnalysis('❌ Parameter extraction issue - this is the root cause!');
+                    }
+                }
+                
+            } catch (error) {
+                addResult(`💥 POST Debug error: ${error.message}`, 'error');
+                updateAnalysis('❌ POST Debug endpoint not available - add debugPOST endpoint to Code.js');
+            }
+        }
+        
+        // Test Direct Authentication
+        async function testDirectAuth() {
+            addResult('🎯 Testing direct authentication...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testDirectAuthentication');
+                url.searchParams.set('username', USERNAME);
+                url.searchParams.set('password', PASSWORD);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('Direct Auth', data);
+                
+                if (data.status === 'success') {
+                    addResult('✅ Direct authentication works!', 'success');
+                    updateAnalysis('✅ authenticateUser function works - issue is in POST parameter handling');
+                } else {
+                    addResult(`❌ Direct auth failed: ${data.message}`, 'error');
+                    updateAnalysis('❌ authenticateUser function has issues - check authentication logic');
+                }
+                
+            } catch (error) {
+                addResult(`💥 Direct auth error: ${error.message}`, 'error');
+                updateAnalysis('❌ testDirectAuthentication endpoint not available - add to Code.js');
+            }
+        }
+        
+        // Compare POST vs GET
+        async function testPOSTvsGETComparison() {
+            addResult('🔬 Running POST vs GET comparison...', 'warning');
+            clearResults();
+            
+            updateAnalysis('🔬 Starting comprehensive comparison test...');
+            
+            // Test GET first
+            await testGETLogin();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Test POST
+            await testPOSTLogin();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Test supporting functions
+            await testGETUserData();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testGETPasswordVerify();
+            
+            updateAnalysis('🔬 Comparison complete - check results above for differences');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🔬 Final POST Login Debug ready!', 'info');
+            addResult('✅ Deploy confirmed working - focusing on POST login only', 'success');
+            updateAnalysis('🎯 Goal: Find why POST login fails when GET works');
+        });
+    </script>
+</body>
+</html>

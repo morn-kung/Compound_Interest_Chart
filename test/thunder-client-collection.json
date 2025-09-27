@@ -1,0 +1,301 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "Trading Journal API Tests",
+  "dateExported": "2025-09-27T03:15:00.000Z",
+  "version": "1.1",
+  "folders": [
+    {
+      "_id": "folder1",
+      "name": "GET Requests",
+      "containerId": "",
+      "created": "2025-09-27T03:15:00.000Z",
+      "sortNum": 10000
+    },
+    {
+      "_id": "folder2", 
+      "name": "POST Requests",
+      "containerId": "",
+      "created": "2025-09-27T03:15:00.000Z",
+      "sortNum": 20000
+    }
+  ],
+  "requests": [
+    {
+      "_id": "req1",
+      "colId": "collection1",
+      "containerId": "folder1",
+      "name": "Get Accounts",
+      "url": "{{BASE_URL}}?action=getAccounts",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2025-09-27T03:15:00.000Z",
+      "modified": "2025-09-27T03:15:00.000Z",
+      "headers": [],
+      "params": [
+        {
+          "name": "action",
+          "value": "getAccounts",
+          "isPath": false
+        }
+      ],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "json-query",
+          "custom": "json.status",
+          "action": "equal", 
+          "value": "success"
+        }
+      ]
+    },
+    {
+      "_id": "req2",
+      "colId": "collection1", 
+      "containerId": "folder1",
+      "name": "Get Assets",
+      "url": "{{BASE_URL}}?action=getAssets",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2025-09-27T03:15:00.000Z",
+      "modified": "2025-09-27T03:15:00.000Z",
+      "headers": [],
+      "params": [
+        {
+          "name": "action",
+          "value": "getAssets",
+          "isPath": false
+        }
+      ],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "json-query",
+          "custom": "json.status",
+          "action": "equal",
+          "value": "success"
+        }
+      ]
+    },
+    {
+      "_id": "req3",
+      "colId": "collection1",
+      "containerId": "folder1", 
+      "name": "Get Trading History - Account 405911362",
+      "url": "{{BASE_URL}}?action=getTradingHistory&accountId=405911362",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2025-09-27T03:15:00.000Z",
+      "modified": "2025-09-27T03:15:00.000Z",
+      "headers": [],
+      "params": [
+        {
+          "name": "action",
+          "value": "getTradingHistory",
+          "isPath": false
+        },
+        {
+          "name": "accountId", 
+          "value": "405911362",
+          "isPath": false
+        }
+      ],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "json-query",
+          "custom": "json.status", 
+          "action": "equal",
+          "value": "success"
+        }
+      ]
+    },
+    {
+      "_id": "req4",
+      "colId": "collection1",
+      "containerId": "folder1",
+      "name": "Get Trading History - Account 107338990", 
+      "url": "{{BASE_URL}}?action=getTradingHistory&accountId=107338990",
+      "method": "GET",
+      "sortNum": 40000,
+      "created": "2025-09-27T03:15:00.000Z",
+      "modified": "2025-09-27T03:15:00.000Z",
+      "headers": [],
+      "params": [
+        {
+          "name": "action",
+          "value": "getTradingHistory",
+          "isPath": false
+        },
+        {
+          "name": "accountId",
+          "value": "107338990", 
+          "isPath": false
+        }
+      ],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "json-query",
+          "custom": "json.status",
+          "action": "equal", 
+          "value": "success"
+        }
+      ]
+    },
+    {
+      "_id": "req5",
+      "colId": "collection1",
+      "containerId": "folder2",
+      "name": "Add New Trade - Account 405911362",
+      "url": "{{BASE_URL}}",
+      "method": "POST",
+      "sortNum": 50000,
+      "created": "2025-09-27T03:15:00.000Z",
+      "modified": "2025-09-27T03:15:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/x-www-form-urlencoded"
+        }
+      ],
+      "body": {
+        "type": "formencoded",
+        "raw": "",
+        "form": [
+          {
+            "name": "accountId",
+            "value": "405911362"
+          },
+          {
+            "name": "assetId", 
+            "value": "1"
+          },
+          {
+            "name": "startBalance",
+            "value": "1000.00"
+          },
+          {
+            "name": "dailyProfit",
+            "value": "50.25"
+          },
+          {
+            "name": "lotSize",
+            "value": "0.05"
+          },
+          {
+            "name": "notes",
+            "value": "Test trade from Thunder Client"
+          }
+        ]
+      },
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "json-query",
+          "custom": "json.status",
+          "action": "equal",
+          "value": "success"
+        }
+      ]
+    },
+    {
+      "_id": "req6",
+      "colId": "collection1",
+      "containerId": "folder2",
+      "name": "Add New Trade - Account 107338990",
+      "url": "{{BASE_URL}}",
+      "method": "POST", 
+      "sortNum": 60000,
+      "created": "2025-09-27T03:15:00.000Z",
+      "modified": "2025-09-27T03:15:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/x-www-form-urlencoded"
+        }
+      ],
+      "body": {
+        "type": "formencoded",
+        "raw": "",
+        "form": [
+          {
+            "name": "accountId",
+            "value": "107338990"
+          },
+          {
+            "name": "assetId",
+            "value": "2"
+          },
+          {
+            "name": "startBalance", 
+            "value": "20.00"
+          },
+          {
+            "name": "dailyProfit",
+            "value": "-2.50"
+          },
+          {
+            "name": "lotSize",
+            "value": "0.01"
+          },
+          {
+            "name": "notes",
+            "value": "Test loss trade from Thunder Client"
+          }
+        ]
+      },
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "json-query",
+          "custom": "json.status",
+          "action": "equal",
+          "value": "success"
+        }
+      ]
+    }
+  ],
+  "envs": [
+    {
+      "_id": "env1",
+      "name": "Trading Journal Environment",
+      "default": true,
+      "data": [
+        {
+          "name": "BASE_URL",
+          "value": "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE"
+        }
+      ]
+    }
+  ]
+}

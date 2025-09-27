@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple POST Debug Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🔬 Simple POST Debug Test</h1>
+        
+        <div class="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
+            <h2 class="font-semibold">🚨 Current Issues:</h2>
+            <ul class="list-disc ml-6 mt-2 text-sm">
+                <li>POST Login fails: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"</li>
+                <li>Debug endpoints require authentication</li>
+                <li>Parameter extraction in POST requests</li>
+            </ul>
+        </div>
+        
+        <div class="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
+            <h2 class="font-semibold">✅ What We Know Works:</h2>
+            <ul class="list-disc ml-6 mt-2 text-sm">
+                <li>GET tests pass (authentication logic is correct)</li>
+                <li>Password hashing works: "likit.se4498" → "0f34ff62ae..."</li>
+                <li>Token generation works</li>
+                <li>Database connection works</li>
+            </ul>
+        </div>
+        
+        <!-- Test Controls -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🧪 Simple Tests</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="testPOSTDebugSimple()" class="bg-yellow-600 text-white px-4 py-3 rounded hover:bg-yellow-700">
+                    🔍 POST Debug (Simple)
+                </button>
+                <button onclick="testPOSTLogin()" class="bg-red-600 text-white px-4 py-3 rounded hover:bg-red-700">
+                    🔥 POST Login
+                </button>
+                <button onclick="testGETWorking()" class="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700">
+                    ✅ GET Test (Working)
+                </button>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📊 Results</h2>
+            <div id="results" class="bg-gray-50 p-4 rounded text-xs font-mono h-96 overflow-y-auto whitespace-pre">
+Ready to test...
+            </div>
+        </div>
+        
+        <!-- Analysis -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-6">
+            <h3 class="font-semibold mb-3">🧠 Analysis Steps:</h3>
+            <ol class="list-decimal ml-6 space-y-1 text-sm">
+                <li><strong>Test POST Debug</strong> - ดูว่า parameters ถูกส่งมาหรือไม่</li>
+                <li><strong>Test POST Login</strong> - ดู error message แบบละเอียด</li>
+                <li><strong>Compare with GET</strong> - หา root cause ของความแตกต่าง</li>
+                <li><strong>Fix parameter extraction</strong> - แก้ไขตาม findings</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt/exec';
+        
+        function addResult(title, data) {
+            const resultsDiv = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const content = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n${'='.repeat(60)}\n\n`;
+            resultsDiv.textContent = content + resultsDiv.textContent;
+        }
+        
+        // Test simple POST debug
+        async function testPOSTDebugSimple() {
+            try {
+                console.log('🔍 Testing POST Debug...');
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'debugPOST',
+                        username: '4498',
+                        password: 'likit.se4498',
+                        test: 'parameter-extraction'
+                    })
+                });
+                
+                const data = await response.json();
+                addResult('POST Debug Test', data);
+                
+                // Analysis
+                if (data.debug && data.debug.extractionTest) {
+                    const extract = data.debug.extractionTest;
+                    console.log('✅ Parameter extraction:', extract);
+                    
+                    if (extract.username === '4498' && extract.password === '[PROVIDED]') {
+                        addResult('✅ Parameter Extraction Analysis', {
+                            status: 'WORKING',
+                            message: 'Parameters are being extracted correctly',
+                            nextStep: 'Problem is in authentication logic, not parameter extraction'
+                        });
+                    } else {
+                        addResult('❌ Parameter Extraction Analysis', {
+                            status: 'FAILING',
+                            message: 'Parameters not extracted correctly',
+                            received: extract,
+                            nextStep: 'Fix getParam() function in handlePostRequest'
+                        });
+                    }
+                } else {
+                    addResult('❌ Debug Endpoint Analysis', {
+                        status: 'UNAVAILABLE',
+                        message: 'debugPOST endpoint not responding properly',
+                        nextStep: 'Add debugPOST endpoint to Code.js'
+                    });
+                }
+                
+            } catch (error) {
+                addResult('💥 POST Debug Error', {
+                    error: error.message,
+                    nextStep: 'Check if debugPOST endpoint exists in Code.js'
+                });
+            }
+        }
+        
+        // Test POST login with detailed analysis
+        async function testPOSTLogin() {
+            try {
+                console.log('🔥 Testing POST Login...');
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: '4498',
+                        password: 'likit.se4498'
+                    })
+                });
+                
+                const data = await response.json();
+                addResult('POST Login Test', data);
+                
+                // Analysis
+                if (data.status === 'success') {
+                    addResult('🎉 POST Login Analysis', {
+                        status: 'FIXED!',
+                        message: 'POST login is now working!',
+                        user: data.user?.name,
+                        token: data.token ? 'Generated' : 'Not generated'
+                    });
+                } else if (data.debug) {
+                    addResult('🔍 POST Login Debug Analysis', {
+                        status: 'HAS DEBUG INFO',
+                        message: data.message,
+                        debug: data.debug,
+                        nextStep: 'Check parameter extraction in debug info'
+                    });
+                } else {
+                    addResult('❌ POST Login Analysis', {
+                        status: 'NO DEBUG INFO',
+                        message: data.message,
+                        nextStep: 'Add debug logging to login endpoint'
+                    });
+                }
+                
+            } catch (error) {
+                addResult('💥 POST Login Error', {
+                    error: error.message,
+                    nextStep: 'Check network or server issues'
+                });
+            }
+        }
+        
+        // Test GET (working method) for comparison
+        async function testGETWorking() {
+            try {
+                console.log('✅ Testing GET (should work)...');
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testLoginStepByStep');
+                url.searchParams.set('username', '4498');
+                url.searchParams.set('password', 'likit.se4498');
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addResult('GET Login Test (Working)', data);
+                
+                if (data.status === 'success') {
+                    addResult('✅ GET Login Analysis', {
+                        status: 'WORKING AS EXPECTED',
+                        message: 'GET method authentication works perfectly',
+                        user: data.user?.name,
+                        token: data.token ? 'Generated' : 'Not generated',
+                        conclusion: 'Problem is specific to POST parameter handling'
+                    });
+                } else {
+                    addResult('⚠️ GET Login Analysis', {
+                        status: 'UNEXPECTED FAILURE',
+                        message: 'Even GET method is failing now',
+                        error: data.message,
+                        nextStep: 'Check if something changed in authentication logic'
+                    });
+                }
+                
+            } catch (error) {
+                addResult('💥 GET Login Error', {
+                    error: error.message,
+                    nextStep: 'Check if endpoint exists'
+                });
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🚀 Simple POST Debug Test Ready', {
+                message: 'Ready to diagnose POST login issue',
+                knownWorking: ['GET authentication', 'Password hashing', 'Token generation'],
+                knownFailing: ['POST login', 'POST parameter extraction'],
+                nextStep: 'Click POST Debug to start diagnosis'
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAS Server Side Login Tests</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🧪 GAS Server Side Login Tests</h1>
+        
+        <!-- Test Controls -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🎛️ Test Controls</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">GAS URL:</label>
+                    <input type="text" id="gasUrl" 
+                           value="https://script.google.com/macros/s/AKfycbw4MK7BupKGaWI92A05pkHU8j5gGs2Krls7K4oEaqUEAuIR-xOi26TZw-58s3rBZKgo/exec"
+                           class="w-full border rounded px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Test Username:</label>
+                    <input type="text" id="testUsername" value="4498" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Test Password:</label>
+                    <input type="text" id="testPassword" value="likit.se4498" class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Buttons -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+            <button onclick="testGetUserData()" class="bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700 text-sm">
+                📊 Get User Data
+            </button>
+            <button onclick="testFindUser()" class="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700 text-sm">
+                🔍 Find User
+            </button>
+            <button onclick="testVerifyPassword()" class="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700 text-sm">
+                🔐 Verify Password
+            </button>
+            <button onclick="testLoginStepByStep()" class="bg-orange-600 text-white px-4 py-3 rounded hover:bg-orange-700 text-sm">
+                🚶 Step by Step
+            </button>
+            <button onclick="testConfiguration()" class="bg-indigo-600 text-white px-4 py-3 rounded hover:bg-indigo-700 text-sm">
+                ⚙️ Configuration
+            </button>
+            <button onclick="runAllLoginTests()" class="bg-red-600 text-white px-4 py-3 rounded hover:bg-red-700 text-sm font-bold">
+                🧪 Run All Tests
+            </button>
+            <button onclick="clearResults()" class="bg-gray-600 text-white px-4 py-3 rounded hover:bg-gray-700 text-sm">
+                🗑️ Clear Results
+            </button>
+            <button onclick="testOriginalLogin()" class="bg-yellow-600 text-white px-4 py-3 rounded hover:bg-yellow-700 text-sm">
+                🔑 Original Login
+            </button>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📋 Test Results</h2>
+            <div id="results" class="space-y-4 max-h-96 overflow-y-auto">
+                <p class="text-gray-500">Select a test to run...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gasUrl = () => document.getElementById('gasUrl').value;
+        const getUsername = () => document.getElementById('testUsername').value;
+        const getPassword = () => document.getElementById('testPassword').value;
+        
+        async function callGASTest(action, additionalParams = {}) {
+            const url = new URL(gasUrl());
+            url.searchParams.set('action', action);
+            
+            Object.keys(additionalParams).forEach(key => {
+                url.searchParams.set(key, additionalParams[key]);
+            });
+            
+            try {
+                addResult(`🔄 Calling ${action}...`, 'info');
+                const response = await fetch(url.toString());
+                const result = await response.json();
+                
+                addResult(`✅ ${action} completed`, 'success');
+                addResult(`<pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap">${JSON.stringify(result, null, 2)}</pre>`, 'success');
+                
+                return result;
+            } catch (error) {
+                addResult(`❌ ${action} failed: ${error.message}`, 'error');
+                return { error: error.message };
+            }
+        }
+        
+        async function testGetUserData() {
+            clearResults();
+            await callGASTest('testGetUserData');
+        }
+        
+        async function testFindUser() {
+            clearResults();
+            await callGASTest('testFindUser', { username: getUsername() });
+        }
+        
+        async function testVerifyPassword() {
+            clearResults();
+            await callGASTest('testVerifyPassword', { 
+                username: getUsername(), 
+                password: getPassword() 
+            });
+        }
+        
+        async function testLoginStepByStep() {
+            clearResults();
+            await callGASTest('testLoginStepByStep', { 
+                username: getUsername(), 
+                password: getPassword() 
+            });
+        }
+        
+        async function testConfiguration() {
+            clearResults();
+            await callGASTest('testConfiguration');
+        }
+        
+        async function runAllLoginTests() {
+            clearResults();
+            addResult('🚀 Running comprehensive test suite...', 'info');
+            await callGASTest('runAllLoginTests', { 
+                username: getUsername(), 
+                password: getPassword() 
+            });
+        }
+        
+        async function testOriginalLogin() {
+            clearResults();
+            addResult('🔑 Testing original login endpoint...', 'info');
+            
+            try {
+                const response = await fetch(gasUrl(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: getUsername(),
+                        password: getPassword()
+                    })
+                });
+                
+                const result = await response.json();
+                addResult('📥 Original Login Result:', 'info');
+                addResult(`<pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">${JSON.stringify(result, null, 2)}</pre>`, result.status === 'success' ? 'success' : 'error');
+                
+            } catch (error) {
+                addResult(`❌ Original login error: ${error.message}`, 'error');
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            
+            const colors = {
+                info: 'text-blue-600 border-blue-400 bg-blue-50',
+                success: 'text-green-600 border-green-400 bg-green-50',
+                error: 'text-red-600 border-red-400 bg-red-50'
+            };
+            
+            div.className = `p-3 border-l-4 ${colors[type]} mb-2 rounded-r`;
+            div.innerHTML = message;
+            
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        // Auto-run basic test on load
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🚀 GAS Server Side Login Tests Ready!', 'info');
+            addResult('💡 คลิก "Run All Tests" เพื่อรันการทดสอบครบถ้วน', 'info');
+        });
+    </script>
+</body>
+</html>

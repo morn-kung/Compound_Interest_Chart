@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deploy Issue Diagnosis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🚨 Deploy Issue Diagnosis</h1>
+        
+        <div class="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
+            <h2 class="font-semibold">🚨 CRITICAL ISSUE IDENTIFIED:</h2>
+            <p class="text-sm mt-1">GAS deployment is NOT updated. Local Code.js is correct, but GAS is still using old version.</p>
+            <p class="text-sm mt-1"><strong>Evidence:</strong> debugPOST returns "ข้อมูลไม่ครบถ้วน: accountId, assetId" (old endpoint)</p>
+        </div>
+        
+        <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-6">
+            <h2 class="font-semibold">🛠️ SOLUTION: NEW DEPLOYMENT REQUIRED</h2>
+            <p class="text-sm mt-1">Update Deploy failed. Need to create NEW deployment to force refresh.</p>
+        </div>
+        
+        <!-- Manual URL Test -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🔍 Manual Verification</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">Current GAS URL:</label>
+                <input type="text" id="gasUrl" 
+                       value="https://script.google.com/macros/s/AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt/exec"
+                       class="w-full border rounded px-3 py-2 text-xs">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="testCurrentDeploy()" class="bg-red-600 text-white px-4 py-3 rounded hover:bg-red-700">
+                    🔍 Test Current Deploy
+                </button>
+                <button onclick="testDirectURL()" class="bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700">
+                    🌐 Open in Browser
+                </button>
+                <button onclick="copyInstructions()" class="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700">
+                    📋 Copy Instructions
+                </button>
+            </div>
+        </div>
+        
+        <!-- Step by step instructions -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">📋 Step-by-Step Solution</h2>
+            <div class="space-y-4">
+                <div class="flex items-start space-x-3">
+                    <span class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
+                    <div>
+                        <p class="font-medium">Create NEW Deployment in GAS</p>
+                        <p class="text-sm text-gray-600">Go to Google Apps Script → Deploy → NEW DEPLOYMENT (not manage)</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="bg-orange-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</span>
+                    <div>
+                        <p class="font-medium">Configure Web App</p>
+                        <p class="text-sm text-gray-600">Execute as: Me, Who has access: Anyone</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="bg-yellow-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</span>
+                    <div>
+                        <p class="font-medium">Copy NEW URL</p>
+                        <p class="text-sm text-gray-600">Will be different from current URL</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">4</span>
+                    <div>
+                        <p class="font-medium">Update config.js</p>
+                        <p class="text-sm text-gray-600">Replace APPS_SCRIPT_URL with new URL</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">5</span>
+                    <div>
+                        <p class="font-medium">Test NEW Deployment</p>
+                        <p class="text-sm text-gray-600">Should see debug endpoints working</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📊 Test Results</h2>
+            <div id="results" class="bg-gray-50 p-4 rounded text-xs font-mono h-64 overflow-y-auto whitespace-pre">
+Ready to diagnose deployment issue...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function addResult(title, data) {
+            const resultsDiv = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const content = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n${'='.repeat(50)}\n\n`;
+            resultsDiv.textContent = content + resultsDiv.textContent;
+        }
+        
+        async function testCurrentDeploy() {
+            const gasUrl = document.getElementById('gasUrl').value;
+            
+            // Test basic endpoint
+            try {
+                addResult('🔍 Testing Current Deployment', { url: gasUrl });
+                
+                const response = await fetch(`${gasUrl}?action=testGetUserData`);
+                const data = await response.json();
+                
+                if (data.status === 'error' && data.message.includes('Token is required')) {
+                    addResult('❌ OLD DEPLOYMENT CONFIRMED', {
+                        issue: 'publicEndpoints not updated',
+                        evidence: 'testGetUserData requires authentication',
+                        solution: 'NEW deployment required'
+                    });
+                } else if (data.users && Array.isArray(data.users)) {
+                    addResult('✅ NEW DEPLOYMENT WORKING', {
+                        status: 'Updated deployment detected',
+                        usersFound: data.users.length,
+                        message: 'Code.js changes are active'
+                    });
+                } else {
+                    addResult('⚠️ UNEXPECTED RESPONSE', data);
+                }
+                
+            } catch (error) {
+                addResult('💥 CONNECTION ERROR', { error: error.message });
+            }
+            
+            // Test debugPOST
+            try {
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'debugPOST',
+                        username: '4498',
+                        password: 'test'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'debug') {
+                    addResult('✅ debugPOST WORKING', {
+                        status: 'NEW deployment confirmed',
+                        message: 'debugPOST endpoint is active'
+                    });
+                } else if (data.message && data.message.includes('accountId, assetId')) {
+                    addResult('❌ debugPOST OLD VERSION', {
+                        issue: 'Still using old POST handler',
+                        evidence: 'Requires accountId, assetId',
+                        solution: 'NEW deployment definitely needed'
+                    });
+                } else {
+                    addResult('⚠️ debugPOST UNEXPECTED', data);
+                }
+                
+            } catch (error) {
+                addResult('💥 debugPOST ERROR', { error: error.message });
+            }
+        }
+        
+        function testDirectURL() {
+            const gasUrl = document.getElementById('gasUrl').value;
+            const testUrl = `${gasUrl}?action=testGetUserData`;
+            window.open(testUrl, '_blank');
+            addResult('🌐 Opened in Browser', { 
+                url: testUrl,
+                expectation: 'Should show user data or Token required error'
+            });
+        }
+        
+        function copyInstructions() {
+            const instructions = `
+🚨 DEPLOY ISSUE SOLUTION:
+
+1. Go to Google Apps Script Editor
+2. Click "Deploy" → "NEW DEPLOYMENT" (not manage deployments)
+3. Choose "Web app"
+4. Set "Execute as: Me"
+5. Set "Who has access: Anyone" 
+6. Click "Deploy"
+7. COPY THE NEW URL
+8. Update config.js with new URL
+9. Test with debugPOST endpoint
+
+Current issue: Update Deploy didn't work, need NEW deployment.
+            `;
+            
+            navigator.clipboard.writeText(instructions).then(() => {
+                addResult('📋 Instructions Copied', { 
+                    message: 'Paste into notes or follow directly',
+                    action: 'Create NEW deployment in GAS'
+                });
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🚨 Deploy Issue Diagnosis Ready', {
+                problem: 'GAS deployment not updated despite correct local code',
+                evidence: 'debugPOST returns old error, GET needs auth',
+                solution: 'Create NEW deployment (not update existing)'
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Updated Deployment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-5xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🎉 Test Updated Deployment</h1>
+        
+        <div class="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
+            <h2 class="font-semibold">✅ Deployment Status:</h2>
+            <p class="text-sm mt-1">✅ clasp push completed (22 files)</p>
+            <p class="text-sm">✅ Update deploy completed</p>
+            <p class="text-sm">🎯 Ready to test debug endpoints</p>
+        </div>
+        
+        <!-- Quick Test Buttons -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <button onclick="testPOSTLogin()" class="bg-red-600 text-white px-4 py-3 rounded hover:bg-red-700 font-bold">
+                🔥 POST Login
+            </button>
+            <button onclick="testPOSTDebug()" class="bg-yellow-600 text-white px-4 py-3 rounded hover:bg-yellow-700">
+                🔍 POST Debug
+            </button>
+            <button onclick="testDirectAuth()" class="bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700">
+                🎯 Direct Auth
+            </button>
+            <button onclick="testFullDebug()" class="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700">
+                🚀 Full Debug
+            </button>
+            <button onclick="runAllTests()" class="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700 font-bold">
+                🧪 Run All Tests
+            </button>
+            <button onclick="clearResults()" class="bg-gray-600 text-white px-4 py-3 rounded hover:bg-gray-700">
+                🗑️ Clear
+            </button>
+        </div>
+        
+        <!-- Results Display -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Status -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">📊 Test Status</h2>
+                <div id="status" class="space-y-2">
+                    <p class="text-gray-500">Ready to test updated deployment...</p>
+                </div>
+            </div>
+            
+            <!-- Progress -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-lg font-semibold mb-4">📈 Progress</h2>
+                <div id="progress" class="space-y-2">
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="progressBar" class="bg-blue-600 h-2 rounded-full w-0 transition-all duration-300"></div>
+                    </div>
+                    <p id="progressText" class="text-sm text-gray-600">0% - Ready to start</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Detailed Results -->
+        <div class="bg-white p-6 rounded-lg shadow mt-6">
+            <h2 class="text-lg font-semibold mb-4">🔬 Detailed Results</h2>
+            <div id="results" class="space-y-3 max-h-96 overflow-y-auto">
+                <p class="text-gray-500">Click a test button to see results...</p>
+            </div>
+        </div>
+        
+        <!-- Raw API Data -->
+        <div class="bg-white p-6 rounded-lg shadow mt-6">
+            <h2 class="text-lg font-semibold mb-4">📡 Raw API Responses</h2>
+            <div id="rawData" class="bg-gray-50 p-4 rounded text-xs font-mono h-64 overflow-y-auto whitespace-pre">
+Waiting for API responses...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt/exec';
+        const USERNAME = '4498';
+        const PASSWORD = 'likit.se4498';
+        
+        let testProgress = 0;
+        let totalTests = 5;
+        
+        function updateProgress(increment = 20) {
+            testProgress += increment;
+            document.getElementById('progressBar').style.width = `${testProgress}%`;
+            document.getElementById('progressText').textContent = `${testProgress}% - ${testProgress === 100 ? 'Complete!' : 'Testing...'}`;
+        }
+        
+        function addStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            const div = document.createElement('div');
+            
+            const colors = {
+                info: 'text-blue-600 bg-blue-50 border-l-4 border-blue-400',
+                success: 'text-green-600 bg-green-50 border-l-4 border-green-400',
+                error: 'text-red-600 bg-red-50 border-l-4 border-red-400',
+                warning: 'text-yellow-600 bg-yellow-50 border-l-4 border-yellow-400'
+            };
+            
+            div.className = `p-3 rounded ${colors[type]} text-sm mb-2`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            statusDiv.insertBefore(div, statusDiv.firstChild);
+        }
+        
+        function addResult(title, message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            
+            const colors = {
+                info: 'border-blue-200 bg-blue-50',
+                success: 'border-green-200 bg-green-50',
+                error: 'border-red-200 bg-red-50',
+                warning: 'border-yellow-200 bg-yellow-50'
+            };
+            
+            div.className = `p-4 border rounded ${colors[type]} mb-3`;
+            div.innerHTML = `
+                <h3 class="font-semibold mb-2">${title}</h3>
+                <p class="text-sm">${message}</p>
+            `;
+            
+            resultsDiv.insertBefore(div, resultsDiv.firstChild);
+        }
+        
+        function addRaw(title, data) {
+            const rawDiv = document.getElementById('rawData');
+            const timestamp = new Date().toLocaleTimeString();
+            const content = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n${'='.repeat(50)}\n\n`;
+            rawDiv.textContent = content + rawDiv.textContent;
+        }
+        
+        function clearResults() {
+            document.getElementById('status').innerHTML = '<p class="text-gray-500">Cleared...</p>';
+            document.getElementById('results').innerHTML = '<p class="text-gray-500">Cleared...</p>';
+            document.getElementById('rawData').textContent = 'Cleared...\n';
+            testProgress = 0;
+            updateProgress(0);
+        }
+        
+        // Test POST Login
+        async function testPOSTLogin() {
+            addStatus('🔥 Testing POST Login...', 'warning');
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: USERNAME,
+                        password: PASSWORD
+                    })
+                });
+                
+                const data = await response.json();
+                addRaw('POST Login', data);
+                
+                if (data.status === 'success') {
+                    addStatus('🎉 POST Login WORKING! Problem solved!', 'success');
+                    addResult('🎉 POST Login Success!', 
+                              `✅ Logged in as: ${data.user?.name}<br/>
+                               🎫 Token generated: ${data.token ? 'Yes' : 'No'}`, 'success');
+                    return true;
+                } else {
+                    addStatus(`❌ POST Login still failing: ${data.message}`, 'error');
+                    addResult('❌ POST Login Failed', 
+                              `Message: ${data.message}<br/>
+                               Debug: ${data.debug ? 'Available' : 'Not available'}`, 'error');
+                    return false;
+                }
+                
+            } catch (error) {
+                addStatus(`💥 POST Login error: ${error.message}`, 'error');
+                addResult('💥 POST Login Error', `Network/Server error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Test POST Debug
+        async function testPOSTDebug() {
+            addStatus('🔍 Testing POST Debug endpoint...', 'info');
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'debugPOST',
+                        username: USERNAME,
+                        password: PASSWORD
+                    })
+                });
+                
+                const data = await response.json();
+                addRaw('POST Debug', data);
+                
+                if (data.status === 'debug') {
+                    addStatus('✅ POST Debug endpoint working!', 'success');
+                    const extract = data.debug?.extractionTest;
+                    if (extract?.username && extract?.password) {
+                        addResult('✅ Parameter Extraction Working', 
+                                  `Username: ${extract.username}<br/>
+                                   Password: ${extract.password}<br/>
+                                   Action: ${extract.action}`, 'success');
+                    } else {
+                        addResult('❌ Parameter Extraction Failed', 
+                                  `Username: ${extract?.username || 'Missing'}<br/>
+                                   Password: ${extract?.password || 'Missing'}`, 'error');
+                    }
+                } else {
+                    addStatus('❌ POST Debug endpoint not responding properly', 'error');
+                    addResult('❌ POST Debug Failed', 'Endpoint not returning debug data', 'error');
+                }
+                
+            } catch (error) {
+                addStatus('❌ POST Debug endpoint not available', 'error');
+                addResult('❌ POST Debug Unavailable', 'Debug endpoint may not have been added to Code.js', 'error');
+            }
+        }
+        
+        // Test Direct Authentication
+        async function testDirectAuth() {
+            addStatus('🎯 Testing Direct Authentication...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testDirectAuthentication');
+                url.searchParams.set('username', USERNAME);
+                url.searchParams.set('password', PASSWORD);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('Direct Auth', data);
+                
+                if (data.status === 'success') {
+                    addStatus('✅ Direct Authentication working!', 'success');
+                    addResult('✅ Authentication Logic OK', 
+                              `✅ authenticateUser() function works correctly<br/>
+                               👤 User: ${data.user?.name}<br/>
+                               🎫 Token: ${data.token ? 'Generated' : 'Not generated'}`, 'success');
+                } else {
+                    addStatus(`❌ Direct Authentication failed: ${data.message}`, 'error');
+                    addResult('❌ Authentication Logic Issue', 
+                              `The core authenticateUser() function is failing<br/>
+                               Message: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addStatus('❌ Direct Auth endpoint not available', 'warning');
+                addResult('❌ Direct Auth Unavailable', 'testDirectAuthentication endpoint may not be added', 'warning');
+            }
+        }
+        
+        // Test Full Debug  
+        async function testFullDebug() {
+            addStatus('🚀 Testing Full Debug process...', 'info');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.set('action', 'testLoginWithFullDebug');
+                url.searchParams.set('username', USERNAME);
+                url.searchParams.set('password', PASSWORD);
+                
+                const response = await fetch(url.toString());
+                const data = await response.json();
+                addRaw('Full Debug', data);
+                
+                if (data.status === 'success') {
+                    addStatus('✅ Full Debug shows successful authentication!', 'success');
+                    addResult('✅ Full Debug Success', 
+                              `Authentication process completed successfully<br/>
+                               Steps: ${data.steps?.length || 0} completed`, 'success');
+                } else if (data.status === 'debug') {
+                    addStatus('🔍 Full Debug process completed', 'info');
+                    addResult('🔍 Full Debug Process', 
+                              `Debug information gathered<br/>
+                               Check raw data for step-by-step details`, 'info');
+                } else {
+                    addStatus(`❌ Full Debug failed: ${data.message}`, 'error');
+                    addResult('❌ Full Debug Failed', 
+                              `Authentication process failed<br/>
+                               Message: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addStatus('❌ Full Debug endpoint not available', 'warning');
+                addResult('❌ Full Debug Unavailable', 'testLoginWithFullDebug endpoint may not be added', 'warning');
+            }
+        }
+        
+        // Run All Tests
+        async function runAllTests() {
+            clearResults();
+            addStatus('🧪 Running comprehensive test suite...', 'info');
+            testProgress = 0;
+            updateProgress(0);
+            
+            const tests = [
+                { name: 'POST Login', func: testPOSTLogin },
+                { name: 'POST Debug', func: testPOSTDebug },
+                { name: 'Direct Auth', func: testDirectAuth },
+                { name: 'Full Debug', func: testFullDebug }
+            ];
+            
+            for (let i = 0; i < tests.length; i++) {
+                addStatus(`🔄 Running ${tests[i].name}...`, 'info');
+                await tests[i].func();
+                updateProgress(25);
+                
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            addStatus('🎯 All tests completed! Check results above.', 'success');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addStatus('🎉 Updated deployment ready for testing!', 'success');
+            addStatus('📝 22 files deployed including debug endpoints', 'info');
+            addStatus('💡 Click "Run All Tests" for comprehensive check', 'info');
+        });
+    </script>
+</body>
+</html>

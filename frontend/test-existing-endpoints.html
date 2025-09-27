@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Existing Endpoints</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🔍 Test Existing Endpoints</h1>
+        
+        <div class="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
+            <h2 class="font-semibold">✅ Testing Public Endpoints Only:</h2>
+            <p class="text-sm mt-1">These endpoints should work without authentication</p>
+        </div>
+        
+        <!-- Test Buttons -->
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <button onclick="testGetAccounts()" class="bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700">
+                📊 Test getAccounts
+            </button>
+            <button onclick="testGetAssets()" class="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700">
+                💰 Test getAssets
+            </button>
+            <button onclick="testGetUserData()" class="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700">
+                👥 Test getUserData
+            </button>
+            <button onclick="testPOSTLogin()" class="bg-red-600 text-white px-4 py-3 rounded hover:bg-red-700">
+                🔑 Test POST Login
+            </button>
+            <button onclick="testAllPublic()" class="bg-orange-600 text-white px-4 py-3 rounded hover:bg-orange-700">
+                🧪 Test All Public
+            </button>
+            <button onclick="clearResults()" class="bg-gray-600 text-white px-4 py-3 rounded hover:bg-gray-700">
+                🗑️ Clear
+            </button>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📊 Test Results</h2>
+            <div id="results" class="space-y-2 max-h-96 overflow-y-auto">
+                <p class="text-gray-500">เตรียมพร้อมทดสอบ endpoints ที่มีอยู่...</p>
+            </div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-6">
+            <h3 class="font-semibold mb-3">💡 คำแนะนำ:</h3>
+            <ul class="list-disc ml-6 space-y-1 text-sm">
+                <li><strong>getAccounts</strong> และ <strong>getAssets</strong> เป็น public endpoints</li>
+                <li><strong>testGetUserData</strong> อาจต้องการ authentication</li>
+                <li><strong>POST Login</strong> จะทดสอบการ login ที่เรากำลังแก้ไข</li>
+                <li>หาก endpoints ใดทำงานได้ แสดงว่า deploy สำเร็จแล้ว</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt/exec';
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            
+            const colors = {
+                info: 'text-blue-600 bg-blue-50 border-blue-200',
+                success: 'text-green-600 bg-green-50 border-green-200',
+                error: 'text-red-600 bg-red-50 border-red-200',
+                warning: 'text-yellow-600 bg-yellow-50 border-yellow-200'
+            };
+            
+            div.className = `p-3 border rounded ${colors[type]} text-sm mb-2`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            resultsDiv.insertBefore(div, resultsDiv.firstChild);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '<p class="text-gray-500">Cleared...</p>';
+        }
+        
+        async function testEndpoint(action, name) {
+            try {
+                addResult(`🔄 Testing ${name}...`, 'info');
+                const response = await fetch(`${GAS_URL}?action=${action}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    addResult(`✅ ${name} working!`, 'success');
+                    return true;
+                } else if (data.status === 'error' && data.message.includes('Token is required')) {
+                    addResult(`🔒 ${name} requires authentication (normal)`, 'warning');
+                    return true; // Deploy is working, just needs auth
+                } else if (Array.isArray(data)) {
+                    addResult(`✅ ${name} returned data (${data.length} items)`, 'success');
+                    return true;
+                } else {
+                    addResult(`⚠️ ${name}: ${data.message || 'Unknown response'}`, 'warning');
+                    console.log(`${name} response:`, data);
+                    return false;
+                }
+            } catch (error) {
+                addResult(`❌ ${name} error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testGetAccounts() {
+            await testEndpoint('getAccounts', 'getAccounts');
+        }
+        
+        async function testGetAssets() {
+            await testEndpoint('getAssets', 'getAssets');
+        }
+        
+        async function testGetUserData() {
+            await testEndpoint('testGetUserData', 'testGetUserData');
+        }
+        
+        async function testPOSTLogin() {
+            addResult('🔑 Testing POST login...', 'warning');
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: '4498',
+                        password: 'likit.se4498'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    addResult('🎉 POST Login WORKING! Problem solved!', 'success');
+                    addResult(`👤 Logged in as: ${data.user?.name}`, 'success');
+                } else {
+                    addResult(`❌ POST Login still failing: ${data.message}`, 'error');
+                    if (data.debug) {
+                        addResult(`🔍 Debug info available in console`, 'info');
+                        console.log('POST Login Debug:', data.debug);
+                    }
+                }
+            } catch (error) {
+                addResult(`💥 POST Login error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAllPublic() {
+            addResult('🧪 Testing all public endpoints...', 'info');
+            
+            const endpoints = [
+                { action: 'getAccounts', name: 'getAccounts' },
+                { action: 'getAssets', name: 'getAssets' },
+                { action: 'testGetUserData', name: 'testGetUserData' }
+            ];
+            
+            let workingCount = 0;
+            
+            for (const endpoint of endpoints) {
+                const isWorking = await testEndpoint(endpoint.action, endpoint.name);
+                if (isWorking) workingCount++;
+                
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            if (workingCount > 0) {
+                addResult(`🎉 Deploy is working! ${workingCount}/${endpoints.length} endpoints responding`, 'success');
+            } else {
+                addResult('❌ No endpoints working - check deployment', 'error');
+            }
+        }
+        
+        // Auto-run basic test on load
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🔍 Testing existing endpoints ready!', 'info');
+            addResult('💡 Click "Test All Public" to verify deployment', 'info');
+        });
+    </script>
+</body>
+</html>

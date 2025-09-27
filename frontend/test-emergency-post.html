@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency POST Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🚨 Emergency POST Test</h1>
+        
+        <div class="bg-red-100 border-l-4 border-red-500 p-4 mb-6">
+            <h2 class="font-semibold">🚨 Critical Issues Found:</h2>
+            <ul class="list-disc ml-6 mt-2 text-sm">
+                <li>debugPOST endpoint not working properly</li>
+                <li>GET endpoints now require authentication (publicEndpoints not updated)</li>
+                <li>Deploy may not have applied our changes</li>
+            </ul>
+        </div>
+        
+        <!-- Manual POST Test -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🔧 Manual POST Login Test</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Username:</label>
+                    <input type="text" id="username" value="4498" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password:</label>
+                    <input type="text" id="password" value="likit.se4498" class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="testPOSTLogin()" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700">
+                    🔥 Test POST Login
+                </button>
+                <button onclick="testBasicConnection()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                    📡 Test Basic Connection
+                </button>
+                <button onclick="testPublicEndpoints()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                    🔓 Test Public Endpoints
+                </button>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📊 Test Results</h2>
+            <div id="results" class="bg-gray-50 p-4 rounded text-xs font-mono h-80 overflow-y-auto whitespace-pre">
+Ready for emergency testing...
+            </div>
+        </div>
+        
+        <!-- Next Steps -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mt-6">
+            <h3 class="font-semibold mb-3">🎯 Possible Solutions:</h3>
+            <ol class="list-decimal ml-6 space-y-2 text-sm">
+                <li><strong>Re-deploy GAS:</strong> Go to GAS Editor → Deploy → New Deployment</li>
+                <li><strong>Check Code.js:</strong> Verify publicEndpoints array is updated</li>
+                <li><strong>Manual Fix:</strong> Add debugPOST handling directly in GAS Editor</li>
+                <li><strong>Fallback:</strong> Focus only on POST login without debug endpoints</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt/exec';
+        
+        function addResult(title, data) {
+            const resultsDiv = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const content = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n${'='.repeat(50)}\n\n`;
+            resultsDiv.textContent = content + resultsDiv.textContent;
+        }
+        
+        async function testPOSTLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                addResult('🔥 POST Login Test', { message: 'Attempting login...', username, password: '[HIDDEN]' });
+                
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                addResult('POST Login Result', data);
+                
+                if (data.status === 'success') {
+                    addResult('🎉 SUCCESS!', { message: 'LOGIN WORKING!', user: data.user?.name });
+                } else if (data.debug) {
+                    addResult('🔍 Debug Info Available', data.debug);
+                } else {
+                    addResult('❌ Login Failed', { message: data.message, noDebugInfo: true });
+                }
+                
+            } catch (error) {
+                addResult('💥 POST Error', { error: error.message });
+            }
+        }
+        
+        async function testBasicConnection() {
+            const testEndpoints = ['getAccounts', 'getAssets'];
+            
+            for (const endpoint of testEndpoints) {
+                try {
+                    addResult(`📡 Testing ${endpoint}`, { endpoint });
+                    
+                    const response = await fetch(`${GAS_URL}?action=${endpoint}`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'error' && data.message.includes('Token is required')) {
+                        addResult(`❌ ${endpoint} - Auth Required`, { 
+                            message: 'publicEndpoints not updated in GAS',
+                            suggestion: 'Need to re-deploy or manually fix'
+                        });
+                    } else if (Array.isArray(data) || data.status === 'success') {
+                        addResult(`✅ ${endpoint} - Working`, { dataReceived: true });
+                    } else {
+                        addResult(`⚠️ ${endpoint} - Unexpected`, data);
+                    }
+                    
+                } catch (error) {
+                    addResult(`💥 ${endpoint} - Error`, { error: error.message });
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+        
+        async function testPublicEndpoints() {
+            addResult('🔓 Testing Public Endpoints', { message: 'Checking if endpoints are truly public...' });
+            
+            const endpoints = [
+                'testGetUserData',
+                'testFindUser',
+                'testVerifyPassword',
+                'testLoginStepByStep'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${GAS_URL}?action=${endpoint}&username=4498&password=likit.se4498`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'error' && data.message.includes('Token is required')) {
+                        addResult(`❌ ${endpoint}`, { authRequired: true, notPublic: true });
+                    } else {
+                        addResult(`✅ ${endpoint}`, { working: true, isPublic: true });
+                    }
+                    
+                } catch (error) {
+                    addResult(`💥 ${endpoint}`, { error: error.message });
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🚨 Emergency POST Test Ready', {
+                issue: 'debugPOST and GET endpoints not working',
+                suspicion: 'Code.js changes not deployed properly',
+                action: 'Testing core functionality only'
+            });
+        });
+    </script>
+</body>
+</html>

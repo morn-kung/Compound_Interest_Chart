@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test NEW Deployment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🎉 Test NEW Deployment</h1>
+        
+        <div class="bg-green-100 border-l-4 border-green-500 p-4 mb-6">
+            <h2 class="font-semibold">✅ NEW Deployment Created!</h2>
+            <p class="text-sm mt-1">URL: AKfycbyD5Ps2g6Aee0On9jSeuy4Qsr86FPydGgrjVwZ6OyoOJZrvjjkqf7IMYgFJRdSKb9-3</p>
+            <p class="text-sm">Config.js updated with new URL</p>
+        </div>
+        
+        <!-- Quick Tests -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">⚡ Quick Tests</h2>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <button onclick="testDebugPOST()" class="bg-yellow-600 text-white px-4 py-3 rounded hover:bg-yellow-700 font-bold">
+                    🔍 debugPOST
+                </button>
+                <button onclick="testDebugLogin()" class="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700 font-bold">
+                    🐛 debugLogin
+                </button>
+                <button onclick="testPOSTLogin()" class="bg-red-600 text-white px-4 py-3 rounded hover:bg-red-700 font-bold">
+                    🔥 POST Login
+                </button>
+                <button onclick="testPublicEndpoint()" class="bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700">
+                    🔓 Public Endpoint
+                </button>
+                <button onclick="testAll()" class="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700 font-bold">
+                    🚀 Test All
+                </button>
+            </div>
+        </div>
+        
+        <!-- Credentials -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🔑 Test Credentials</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Username:</label>
+                    <input type="text" id="username" value="4498" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password:</label>
+                    <input type="text" id="password" value="likit.se4498" class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📊 Test Results</h2>
+            <div id="results" class="bg-gray-50 p-4 rounded text-xs font-mono h-80 overflow-y-auto whitespace-pre">
+Ready to test NEW deployment...
+            </div>
+        </div>
+        
+        <!-- Success Banner -->
+        <div id="successBanner" class="hidden bg-green-500 text-white p-6 rounded-lg shadow mt-6 text-center">
+            <h2 class="text-2xl font-bold mb-2">🎉 POST LOGIN SUCCESS!</h2>
+            <p class="text-lg">The issue is now FIXED! You can use the main application.</p>
+            <div class="mt-4">
+                <button onclick="openMainApp()" class="bg-white text-green-500 px-6 py-2 rounded font-bold hover:bg-gray-100">
+                    🚀 Open Main Application
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Import the new URL from config.js
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyD5Ps2g6Aee0On9jSeuy4Qsr86FPydGgrjVwZ6OyoOJZrvjjkqf7IMYgFJRdSKb9-3/exec';
+        
+        function addResult(title, data, isSuccess = false) {
+            const resultsDiv = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const content = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n${'='.repeat(60)}\n\n`;
+            resultsDiv.textContent = content + resultsDiv.textContent;
+            
+            if (isSuccess) {
+                document.getElementById('successBanner').classList.remove('hidden');
+            }
+        }
+        
+        // Test debugPOST endpoint
+        async function testDebugPOST() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'debugPOST',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'debug') {
+                    addResult('✅ debugPOST SUCCESS', {
+                        status: 'NEW DEPLOYMENT WORKING!',
+                        extractionTest: data.debug?.extractionTest,
+                        message: 'Parameter extraction is working correctly'
+                    });
+                } else if (data.message && data.message.includes('accountId, assetId')) {
+                    addResult('❌ debugPOST OLD VERSION', {
+                        status: 'Still using old deployment',
+                        message: data.message,
+                        solution: 'Wait a few minutes for propagation'
+                    });
+                } else {
+                    addResult('⚠️ debugPOST UNEXPECTED', data);
+                }
+                
+            } catch (error) {
+                addResult('💥 debugPOST ERROR', { error: error.message });
+            }
+        }
+        
+        // Test debugLogin endpoint
+        async function testDebugLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'debugLogin',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'debug') {
+                    addResult('🐛 debugLogin DETAILED', {
+                        status: 'Debug completed',
+                        logs: data.logs,
+                        hashComparison: data.hashComparison,
+                        authResult: data.authResult
+                    });
+                    
+                    // Check if auth succeeded
+                    if (data.authResult && data.authResult.status === 'success') {
+                        addResult('🎉 FOUND THE SOLUTION!', {
+                            status: 'Authentication works in debug mode!',
+                            message: 'The issue might be in regular login endpoint'
+                        });
+                    }
+                } else {
+                    addResult('⚠️ debugLogin UNEXPECTED', data);
+                }
+                
+            } catch (error) {
+                addResult('💥 debugLogin ERROR', { error: error.message });
+            }
+        }
+        
+        // Test POST Login
+        async function testPOSTLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    addResult('🎉 POST LOGIN SUCCESS!', {
+                        status: 'PROBLEM SOLVED!',
+                        user: data.user?.name,
+                        token: data.token ? 'Generated' : 'Not generated',
+                        message: 'POST login is now working perfectly!'
+                    }, true);
+                    
+                    // Store credentials for main app
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    
+                } else {
+                    addResult('❌ POST Login Still Failing', {
+                        status: 'Still not working',
+                        message: data.message,
+                        debug: data.debug || 'No debug info',
+                        suggestion: 'Check if new deployment propagated'
+                    });
+                }
+                
+            } catch (error) {
+                addResult('💥 POST Login ERROR', { error: error.message });
+            }
+        }
+        
+        // Test public endpoint
+        async function testPublicEndpoint() {
+            try {
+                const response = await fetch(`${GAS_URL}?action=testGetUserData`);
+                const data = await response.json();
+                
+                if (data.users && Array.isArray(data.users)) {
+                    addResult('✅ Public Endpoint Working', {
+                        status: 'NEW DEPLOYMENT CONFIRMED',
+                        usersFound: data.users.length,
+                        message: 'publicEndpoints array is working'
+                    });
+                } else if (data.status === 'error' && data.message.includes('Token is required')) {
+                    addResult('❌ Public Endpoint Auth Required', {
+                        status: 'Old deployment still active',
+                        message: 'Wait for propagation or try hard refresh'
+                    });
+                } else {
+                    addResult('⚠️ Public Endpoint Unexpected', data);
+                }
+                
+            } catch (error) {
+                addResult('💥 Public Endpoint ERROR', { error: error.message });
+            }
+        }
+        
+        // Test all
+        async function testAll() {
+            addResult('🚀 Starting Comprehensive Test', { 
+                newURL: GAS_URL,
+                message: 'Testing all endpoints with new deployment'
+            });
+            
+            await testPublicEndpoint();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testDebugPOST();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testPOSTLogin();
+            
+            addResult('✅ Comprehensive Test Complete', {
+                message: 'Check results above for final status',
+                nextStep: 'If POST login works, problem is solved!'
+            });
+        }
+        
+        // Open main application
+        function openMainApp() {
+            window.open('/frontend/index.html', '_blank');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🎉 NEW Deployment Test Ready', {
+                newURL: GAS_URL,
+                oldURL: 'AKfycbzl0_MJ047GyERwOy3dJ-yEUPFmNIUVwkWdxva6Z0Fttgjj_VI73HqzzJueGjb2V4Bt',
+                change: 'URL updated in config.js',
+                expectation: 'debugPOST and POST login should now work'
+            });
+        });
+    </script>
+</body>
+</html>
