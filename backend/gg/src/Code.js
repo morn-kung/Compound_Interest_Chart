@@ -1,4 +1,4 @@
-/**
+/** updated 2025-09-29 T 18:56:00
  * Main Entry Point - Google Apps Script Web App Handler
  * Handles HTTP requests and routes them to appropriate service functions
  * @requires Types.js - For type definitions
@@ -107,6 +107,7 @@ function handleGetRequest(e) {
   
   // Public endpoints (no authentication required)
   const publicEndpoints = [
+    'login',                    // 🔥 LOGIN ENDPOINT (redirects to POST)
     'getAccounts', 
     'getAssets',
     'testGetUserData',
@@ -118,7 +119,8 @@ function handleGetRequest(e) {
     'testLoginWithFullDebug',
     'testDirectAuthentication',
     'debugPOST',
-    'debugLogin'
+    'debugLogin',
+    'testNewCode'
   ];
   
   // Check authentication for protected endpoints
@@ -293,6 +295,88 @@ function handleGetRequest(e) {
       return ContentService.createTextOutput(JSON.stringify(systemHealth))
                           .setMimeType(ContentService.MimeType.JSON);
     
+    case 'refreshSchemas':
+      // Admin-only endpoint to refresh SHEET_SCHEMAS from Google Sheets
+      const refreshSchemasAuthResult = authenticateRequest(params);
+      if (refreshSchemasAuthResult.status === 'error') {
+        return ContentService.createTextOutput(JSON.stringify(refreshSchemasAuthResult))
+                            .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      try {
+        const refreshResult = loadSchemasFromSheets(); // Use new Config.js function
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'success',
+          message: 'SHEET_SCHEMAS refreshed successfully',
+          schemas: refreshResult
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'Failed to refresh schemas: ' + error.toString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    
+    case 'getSchemas':
+      // Admin-only endpoint to get current SHEET_SCHEMAS
+      const getSchemasAuthResult = authenticateRequest(params);
+      if (getSchemasAuthResult.status === 'error') {
+        return ContentService.createTextOutput(JSON.stringify(getSchemasAuthResult))
+                            .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      try {
+        const currentSchemas = getSheetSchemas(); // Use new Config.js function
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'success',
+          message: 'Current SHEET_SCHEMAS retrieved',
+          schemas: currentSchemas
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'Failed to get schemas: ' + error.toString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    
+    case 'validateSheetsWithSchemas':
+      // Admin-only endpoint to validate all sheets against their schemas
+      const validateSchemasAuthResult = authenticateRequest(params);
+      if (validateSchemasAuthResult.status === 'error') {
+        return ContentService.createTextOutput(JSON.stringify(validateSchemasAuthResult))
+                            .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      try {
+        const validationResult = validateAllSheetsAgainstSchemas(); // Use new ValidationService.js function
+        return ContentService.createTextOutput(JSON.stringify(validationResult))
+                            .setMimeType(ContentService.MimeType.JSON);
+      } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'Failed to validate sheets: ' + error.toString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    
+    case 'refreshAndValidate':
+      // Admin-only endpoint to refresh schemas and validate all sheets
+      const refreshValidateAuthResult = authenticateRequest(params);
+      if (refreshValidateAuthResult.status === 'error') {
+        return ContentService.createTextOutput(JSON.stringify(refreshValidateAuthResult))
+                            .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      try {
+        const result = refreshSchemasAndValidate(); // Use new ValidationService.js function
+        return ContentService.createTextOutput(JSON.stringify(result))
+                            .setMimeType(ContentService.MimeType.JSON);
+      } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'Failed to refresh and validate: ' + error.toString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
     case 'testSpreadsheet':
       // Admin-only endpoint to test spreadsheet access
       const testSpreadsheetAuthResult = authenticateRequest(params);
@@ -358,6 +442,35 @@ function handleGetRequest(e) {
       const directResult = testDirectAuthentication(directUsername, directPassword);
       return ContentService.createTextOutput(JSON.stringify(directResult))
                           .setMimeType(ContentService.MimeType.JSON);
+
+    case 'testNewCode':
+      // Test endpoint to verify new code is deployed
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        message: 'NEW CODE IS DEPLOYED! 🎉',
+        timestamp: new Date().toISOString(),
+        version: '2025-09-28-v3',
+        features: [
+          'debugLogin endpoint',
+          'debugPOST endpoint', 
+          'Public endpoints configured',
+          'Enhanced parameter extraction'
+        ]
+      })).setMimeType(ContentService.MimeType.JSON);
+
+    case 'login':
+      // Redirect GET login requests to use POST for security
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Login ต้องใช้ POST method เพื่อความปลอดภัย',
+        suggestion: 'กรุณาใช้ POST request แทน GET request สำหรับการล็อกอิน',
+        debug: {
+          method: 'GET',
+          redirect: 'Please use POST method for login',
+          security: 'Credentials should not be sent via URL parameters'
+        },
+        timestamp: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON);
 
     default:
       return ContentService.createTextOutput(JSON.stringify({
@@ -439,70 +552,7 @@ function handlePostRequest(e) {
                         .setMimeType(ContentService.MimeType.JSON);
   }
   
-  // Handle debug login (PUBLIC - step by step authentication debug)
-  if (action === 'debugLogin') {
-    const debugLogs = [];
-    
-    try {
-      debugLogs.push('🔍 Starting debugLogin...');
-      debugLogs.push(`📝 Username: ${username}, Password: ${password ? '[PROVIDED]' : '[MISSING]'}`);
-      
-      if (!username || !password) {
-        return ContentService.createTextOutput(JSON.stringify({
-          status: 'debug',
-          message: 'Missing credentials',
-          logs: debugLogs,
-          error: 'Username or password not provided'
-        })).setMimeType(ContentService.MimeType.JSON);
-      }
-      
-      // Test password verification directly
-      debugLogs.push('🔐 Testing password verification...');
-      const email = 'likit.se' + username + '@company.com'; // Mock email format
-      const empId = username;
-      
-      debugLogs.push(`📧 Email: ${email}, EmpId: ${empId}`);
-      
-      // Get expected hash
-      const expectedHash = hashPassword(email, empId);
-      debugLogs.push(`🔍 Expected hash: ${expectedHash}`);
-      
-      // Test plain password hash
-      const plainHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password)
-                                 .map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'))
-                                 .join('');
-      debugLogs.push(`📝 Plain password hash: ${plainHash}`);
-      debugLogs.push(`✅ Hash match: ${plainHash === expectedHash}`);
-      
-      // Test full authentication
-      debugLogs.push('🚀 Testing full authentication...');
-      const authResult = authenticateUser(username, password);
-      debugLogs.push(`📊 Auth result: ${JSON.stringify(authResult)}`);
-      
-      return ContentService.createTextOutput(JSON.stringify({
-        status: 'debug',
-        message: 'Debug Login Complete',
-        logs: debugLogs,
-        authResult: authResult,
-        hashComparison: {
-          expected: expectedHash,
-          actual: plainHash,
-          match: plainHash === expectedHash
-        }
-      })).setMimeType(ContentService.MimeType.JSON);
-      
-    } catch (error) {
-      debugLogs.push(`❌ Error: ${error.message}`);
-      return ContentService.createTextOutput(JSON.stringify({
-        status: 'debug',
-        message: 'Debug Login Error',
-        logs: debugLogs,
-        error: error.message
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-  }
-  
-  // Handle login request
+  // Handle login request (PUBLIC - main login endpoint)
   if (action === 'login') {
     if (!username || !password) {
       const errorResponse = {
@@ -524,12 +574,345 @@ function handlePostRequest(e) {
       return ContentService.createTextOutput(JSON.stringify(errorResponse))
                           .setMimeType(ContentService.MimeType.JSON);
     }
+
+    // 🎯 ENHANCED LOGIN WITH DETAILED DEBUG
+    try {
+      // Step 1: Check if user exists
+      const sheet = getSheet(CONFIG.SHEETS.USER);
+      const values = sheet.getDataRange().getValues();
+      
+      // 🔍 DEBUG: Log sheet data for troubleshooting
+      console.log('🔍 POST LOGIN DEBUG - Sheet Data Analysis:');
+      console.log('📊 Total rows:', values.length);
+      console.log('📋 Headers:', values[0]);
+      console.log('🔍 Looking for username:', username, 'Type:', typeof username);
+      
+      let userFound = false;
+      let userRow = null;
+      let foundByEmpId = false;
+      let foundByEmail = false;
+      let debugInfo = [];
+      
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        const empId = row[0];
+        const email = row[2];
+        const userStatus = row[4];
+        
+        // 🔍 DEBUG: Log each row comparison
+        debugInfo.push({
+          rowIndex: i,
+          empId: empId,
+          empIdType: typeof empId,
+          empIdStr: String(empId),
+          email: email,
+          status: userStatus,
+          statusType: typeof userStatus,
+          statusStr: String(userStatus),
+          username: username,
+          usernameType: typeof username,
+          usernameStr: String(username),
+          empIdMatch: empId === username,
+          empIdStringMatch: String(empId) === String(username),
+          statusMatch: userStatus === 1,
+          statusStringMatch: String(userStatus) === '1'
+        });
+        
+        // Convert both to strings for safe comparison (Google Sheets stores numbers as Number type)
+        const empIdStr = String(empId);
+        const emailStr = String(email);
+        const usernameStr = String(username);
+        const statusStr = String(userStatus);
+        
+        if (empIdStr === usernameStr && (statusStr === '1')) {
+          userFound = true;
+          userRow = row;
+          foundByEmpId = true;
+          console.log('✅ FOUND USER by EmpId:', empId, '(converted to string)', empIdStr, 'at row', i);
+          break;
+        } else if (emailStr === usernameStr && (statusStr === '1')) {
+          userFound = true;
+          userRow = row;
+          foundByEmail = true;
+          console.log('✅ FOUND USER by Email:', email, 'at row', i);
+          break;
+        }
+      }
+      
+      console.log('🔍 User search completed:', {
+        userFound: userFound,
+        totalRowsChecked: values.length - 1,
+        searchTerm: username,
+        firstFewRows: debugInfo.slice(0, 3)
+      });
+      
+      // If user not found, return specific error with detailed debug
+      if (!userFound) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+          debug: {
+            step: 'USER_LOOKUP',
+            issue: 'USERNAME_NOT_FOUND',
+            username: username,
+            usernameType: typeof username,
+            message: `ไม่พบ username "${username}" ในระบบ หรือ user ถูก deactivate`,
+            suggestion: 'ตรวจสอบ username ใน Google Sheets USER tab',
+            sheetDebug: {
+              totalRows: values.length,
+              headers: values[0],
+              sampleRows: debugInfo.slice(0, 5),
+              searchPerformed: `Looking for "${username}" in EmpId or Email columns`
+            }
+          },
+          timestamp: new Date().toISOString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // Step 2: Check password
+      const empId = userRow[CONFIG.COLUMNS.USER.EMP_ID];
+      const email = userRow[CONFIG.COLUMNS.USER.EMAIL];
+      const isPasswordValid = verifyPassword(password, email, empId);
+      
+      if (!isPasswordValid) {
+        // Test what the expected password should be
+        const expectedHash = hashPassword(email, empId);
+        const providedHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password)
+                                     .map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'))
+                                     .join('');
+        
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+          debug: {
+            step: 'PASSWORD_VERIFICATION',
+            issue: 'PASSWORD_MISMATCH',
+            username: username,
+            userFound: true,
+            foundBy: foundByEmpId ? 'EmpId' : 'Email',
+            userInfo: {
+              empId: empId,
+              email: email,
+              status: userRow[CONFIG.COLUMNS.USER.USER_STATUS]
+            },
+            passwordCheck: {
+              expectedHash: expectedHash,
+              providedHash: providedHash,
+              match: false
+            },
+            message: `Username "${username}" ถูกต้อง แต่ password ไม่ถูกต้อง`,
+            suggestion: `ลอง password: likit.se${empId} หรือตรวจสอบ password format`
+          },
+          timestamp: new Date().toISOString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // Step 3: Check if password change is required (SAP Style)
+      const requirePasswordChange = userRow[CONFIG.COLUMNS.USER.REQUIRE_PASSWORD_CHANGE]; // *** ใช้ CONFIG แทน hard-coded index ***
+      
+      if (requirePasswordChange === true || String(requirePasswordChange) === 'true') {
+        // *** SAP STYLE: บังคับเปลี่ยนรหัสผ่าน ***
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'password_change_required',
+          message: 'กรุณาเปลี่ยนรหัสผ่านก่อนเข้าใช้งาน',
+          user: {
+            id: empId,
+            fullName: userRow[CONFIG.COLUMNS.USER.FULL_NAME_TH],
+            email: email,
+            role: userRow[CONFIG.COLUMNS.USER.ROLE],
+            status: userRow[CONFIG.COLUMNS.USER.USER_STATUS]
+          },
+          action: 'change_password',
+          redirectTo: 'change-password.html',
+          timestamp: new Date().toISOString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // Step 4: Generate token for normal login (no password change required)
+      const user = {
+        id: empId,
+        fullName: userRow[CONFIG.COLUMNS.USER.FULL_NAME_TH],
+        email: email,
+        role: userRow[CONFIG.COLUMNS.USER.ROLE],
+        status: userRow[CONFIG.COLUMNS.USER.USER_STATUS]
+      };
+      
+      const token = generateToken(user);
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        message: 'เข้าสู่ระบบสำเร็จ',
+        user: user,
+        token: token,
+        timestamp: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON);
+      
+    } catch (error) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
+        debug: {
+          step: 'ERROR',
+          error: error.message,
+          stack: error.stack
+        },
+        timestamp: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // Handle debug login (PUBLIC - step by step authentication debug)
+  if (action === 'debugLogin') {
+    const debugLogs = [];
     
-    const result = authenticateUser(username, password);
-    return ContentService.createTextOutput(JSON.stringify(result))
-                        .setMimeType(ContentService.MimeType.JSON);
+    try {
+      debugLogs.push('🔍 Starting debugLogin...');
+      debugLogs.push(`📝 Username: ${username}, Password: ${password ? '[PROVIDED]' : '[MISSING]'}`);
+      
+      if (!username || !password) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'debug',
+          message: 'Missing credentials',
+          logs: debugLogs,
+          error: 'Username or password not provided'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // 🎯 STEP 1: Test USER LOOKUP
+      debugLogs.push('👤 STEP 1: Testing User Lookup...');
+      const sheet = getSheet(CONFIG.SHEETS.USER);
+      const values = sheet.getDataRange().getValues();
+      
+      let userFound = false;
+      let userRow = null;
+      
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        const empId = row[0];
+        const email = row[2];
+        const userStatus = row[4];
+        
+        if ((empId === username || email === username) && userStatus === 1) {
+          userFound = true;
+          userRow = row;
+          debugLogs.push(`✅ USER FOUND: EmpId=${empId}, Email=${email}, Status=${userStatus}`);
+          break;
+        }
+      }
+      
+      if (!userFound) {
+        debugLogs.push(`❌ USER NOT FOUND: Username "${username}" not in database or inactive`);
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'debug',
+          message: 'User Lookup Failed',
+          logs: debugLogs,
+          userFound: false
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // 🎯 STEP 2: Test PASSWORD VERIFICATION
+      debugLogs.push('🔐 STEP 2: Testing Password Verification...');
+      const empId = userRow[0];
+      const email = userRow[2];
+      
+      debugLogs.push(`📧 User Email: ${email}, EmpId: ${empId}`);
+      
+      // Get expected hash
+      const expectedHash = hashPassword(email, empId);
+      debugLogs.push(`🔍 Expected Hash: ${expectedHash}`);
+      
+      // Test plain password hash
+      const plainHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password)
+                                 .map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'))
+                                 .join('');
+      debugLogs.push(`📝 Provided Password Hash: ${plainHash}`);
+      
+      const passwordMatch = plainHash === expectedHash;
+      debugLogs.push(`${passwordMatch ? '✅' : '❌'} PASSWORD MATCH: ${passwordMatch}`);
+      
+      // 🎯 STEP 3: Test Full Authentication
+      debugLogs.push('🚀 STEP 3: Testing Full Authentication...');
+      const authResult = authenticateUser(username, password);
+      debugLogs.push(`📊 Auth Result Status: ${authResult.status}`);
+      debugLogs.push(`📊 Auth Result Message: ${authResult.message}`);
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'debug',
+        message: 'Step-by-Step Debug Complete',
+        logs: debugLogs,
+        results: {
+          step1_userFound: userFound,
+          step2_passwordMatch: passwordMatch,
+          step3_fullAuth: authResult.status === 'success'
+        },
+        details: {
+          userInfo: userFound ? {
+            empId: userRow[CONFIG.COLUMNS.USER.EMP_ID],
+            name: userRow[CONFIG.COLUMNS.USER.FULL_NAME_TH],
+            email: userRow[CONFIG.COLUMNS.USER.EMAIL],
+            role: userRow[CONFIG.COLUMNS.USER.ROLE],
+            status: userRow[CONFIG.COLUMNS.USER.USER_STATUS]
+          } : null,
+          hashComparison: {
+            expected: expectedHash,
+            actual: plainHash,
+            match: passwordMatch
+          },
+          authResult: authResult
+        }
+      })).setMimeType(ContentService.MimeType.JSON);
+      
+    } catch (error) {
+      debugLogs.push(`❌ Error: ${error.message}`);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'debug',
+        message: 'Debug Login Error',
+        logs: debugLogs,
+        error: error.message
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
   }
   
+  // Handle change password request (SAP Style - after temporary password login)
+  if (action === 'changePassword') {
+    const empId = getParam('empId');
+    const currentPassword = getParam('currentPassword');
+    const newPassword = getParam('newPassword');
+    const confirmPassword = getParam('confirmPassword');
+    
+    if (!empId || !currentPassword || !newPassword || !confirmPassword) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if (newPassword !== confirmPassword) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'รหัสผ่านใหม่ไม่ตรงกัน'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    if (newPassword.length < 8) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 8 ตัวอักษร'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    try {
+      const result = changeUserPassword(empId, currentPassword, newPassword);
+      return ContentService.createTextOutput(JSON.stringify(result))
+                          .setMimeType(ContentService.MimeType.JSON);
+    } catch (error) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน: ' + error.message
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // Handle logout request
   if (action === 'logout') {
     const result = revokeToken(token);
@@ -543,6 +926,20 @@ function handlePostRequest(e) {
   if (action === 'resetPassword') {
     const email = getParam('email');
     const result = requestPasswordReset(email);
+    return ContentService.createTextOutput(JSON.stringify(result))
+                        .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Handle direct authentication test (public endpoint)
+  if (action === 'testDirectAuthentication') {
+    if (!username || !password) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Missing username or password for direct authentication test'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const result = testDirectAuthentication(username, password);
     return ContentService.createTextOutput(JSON.stringify(result))
                         .setMimeType(ContentService.MimeType.JSON);
   }

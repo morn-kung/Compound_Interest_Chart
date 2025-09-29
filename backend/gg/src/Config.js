@@ -56,44 +56,11 @@ const CONFIG = {
   },
   
   /** 
-   * Column Mappings for Google Sheets
+   * Column Mappings for Google Sheets (will be auto-generated from SHEET_SCHEMAS)
    * Zero-based column indices for programmatic access to sheet data
    * @readonly
    */
-  COLUMNS: {
-    TRADING_JOURNAL: {
-      TRANSACTION_ID: 0,
-      TIMESTAMP: 1,
-      ACCOUNT_ID: 2,
-      ASSET_ID: 3,
-      START_BALANCE: 4,
-      DAILY_PROFIT: 5,
-      END_BALANCE: 6,
-      LOT_SIZE: 7,
-      NOTES: 8,
-      TRADE_DATE: 9
-    },
-    ACCOUNTS: {
-      ACCOUNT_ID: 0,
-      ACCOUNT_NAME: 1,
-      OWNER_NAME: 2,
-      INITIAL_CAPITAL: 3
-    },
-    ASSETS: {
-      ASSET_ID: 0,
-      ASSET_NAME: 1,
-      ASSET_TYPE: 2,
-      NOTES: 3
-    },
-    USER: {
-      EMP_ID: 0,
-      FULL_NAME_TH: 1,
-      EMAIL: 2,
-      ROLE: 3,
-      USER_STATUS: 4,
-      PASSWORD: 5
-    }
-  }
+  COLUMNS: {} // Will be populated by auto-generation
 };
 
 /**
@@ -126,4 +93,206 @@ function getSheet(sheetName) {
     console.error(`Error getting sheet ${sheetName}:`, error);
     throw error;
   }
+}
+
+/**
+ * Sheet schema definitions for all sheets (headers, dataTypes)
+ * @typedef {Object} SheetSchema
+ * @property {string[]} headers - List of column names
+ * @property {string[]} dataTypes - List of data types for each column
+ */
+
+/**
+ * Static fallback SHEET_SCHEMAS (can be overridden by loadSchemasFromSheets())
+ * @type {Object.<string, SheetSchema>}
+ */
+var SHEET_SCHEMAS = {
+  Trading_Journal: {
+    "headers": [
+      "Transaction_ID",
+      "Timestamp",
+      "Account ID",
+      "Asset ID",
+      "เงินต้นเริ่มต้นวัน (USD)",
+      "กำไร/ขาดทุนรายวัน (USD)",
+      "เงินรวมสิ้นวัน (USD)",
+      "Lot Size",
+      "หมายเหตุ",
+      "Trade Date"
+    ],
+    "dataTypes": [
+      "string",
+      "object (Date)",
+      "number",
+      "number",
+      "number",
+      "number",
+      "number",
+      "number",
+      "string",
+      "object (Date)"
+    ]
+  },
+  Assets: {
+    "headers": [
+      "Asset ID",
+      "ชื่อสินทรัพย์",
+      "ประเภท",
+      "หมายเหตุ"
+    ],
+    "dataTypes": [
+      "number",
+      "string",
+      "string",
+      "string"
+    ]
+  },
+  Accounts: {
+    "headers": [
+      "Account ID",
+      "ชื่อบัญชี",
+      "ชื่อผู้ใช้/เจ้าของ",
+      "เงินต้นเริ่มต้น (USD)"
+    ],
+    "dataTypes": [
+      "number",
+      "string",
+      "string",
+      "number"
+    ]
+  },
+  UserTokens: {
+    "headers": [
+      "User ID",
+      "Token",
+      "Created At"
+    ],
+    "dataTypes": [
+      "number",
+      "string",
+      "object (Date)"
+    ]
+  },
+  user: {
+    "headers": [
+      "EmpId",
+      "FullNameTH",
+      "Email",
+      "Role",
+      "Userstatus",
+      "password",
+      "requirePasswordChange",
+      "tempPassword"
+    ],  
+    "dataTypes": [
+      "number",
+      "string",
+      "string",
+      "string",
+      "number",
+      "string",
+      "string",
+      "string"
+    ]
+  }
+};
+
+/**
+ * Column index mapping for all sheets (auto-generated from headers)
+ * @readonly
+ * @type {Object.<string, Object<string, number>>}
+ */
+/**
+ * Auto-generated COLUMNS from SHEET_SCHEMAS
+ * Use loadSchemasFromSheets() to refresh from Google Sheets
+ * Use regenerateColumns() to refresh from current SHEET_SCHEMAS
+ */
+var COLUMNS = {};
+// Initial generation will be done by regenerateColumns() below
+
+/**
+ * Load SHEET_SCHEMAS dynamically from Google Sheets (requires checkSheetDatatypes.js)
+ * This will update SHEET_SCHEMAS and regenerate COLUMNS
+ */
+function loadSchemasFromSheets() {
+  try {
+    // Call the function from checkSheetDatatypes.js
+    const sheetsData = checkSheetDatatypes(); // Returns array of objects
+    
+    // Convert array format to object format for SHEET_SCHEMAS
+    const newSchemas = {};
+    sheetsData.forEach(function(sheetData) {
+      newSchemas[sheetData.sheetName] = {
+        headers: sheetData.headers,
+        dataTypes: sheetData.dataTypes
+      };
+    });
+    
+    // Update global SHEET_SCHEMAS
+    SHEET_SCHEMAS = newSchemas;
+    
+    // Regenerate COLUMNS
+    regenerateColumns();
+    
+    console.log('✅ SHEET_SCHEMAS loaded dynamically from Google Sheets');
+    return newSchemas;
+    
+  } catch (error) {
+    console.warn('⚠️ Failed to load schemas from sheets, using static fallback:', error.toString());
+    return SHEET_SCHEMAS; // Return static fallback
+  }
+}
+
+/**
+ * Regenerate COLUMNS from current SHEET_SCHEMAS
+ */
+function regenerateColumns() {
+  // Clear existing COLUMNS
+  COLUMNS = {};
+  
+  // Regenerate COLUMNS from current SHEET_SCHEMAS
+  Object.keys(SHEET_SCHEMAS).forEach(function(sheetName) {
+    var cols = {};
+    var headers = SHEET_SCHEMAS[sheetName].headers;
+    headers.forEach(function(h, idx) { cols[h] = idx; });
+    COLUMNS[sheetName] = cols;
+  });
+  
+  // Update CONFIG.COLUMNS
+  CONFIG.COLUMNS = {
+    TRADING_JOURNAL: COLUMNS.Trading_Journal || {},
+    ACCOUNTS: COLUMNS.Accounts || {},
+    ASSETS: COLUMNS.Assets || {},
+    USER_TOKENS: COLUMNS.UserTokens || {},
+    USER: {
+      EMP_ID: COLUMNS.user ? COLUMNS.user['EmpId'] : 0,
+      FULL_NAME_TH: COLUMNS.user ? COLUMNS.user['FullNameTH'] : 1,
+      EMAIL: COLUMNS.user ? COLUMNS.user['Email'] : 2,
+      ROLE: COLUMNS.user ? COLUMNS.user['Role'] : 3,
+      USER_STATUS: COLUMNS.user ? COLUMNS.user['Userstatus'] : 4,
+      PASSWORD: COLUMNS.user ? COLUMNS.user['password'] : 5,
+      REQUIRE_PASSWORD_CHANGE: COLUMNS.user ? COLUMNS.user['requirePasswordChange'] : 6,
+      TEMP_PASSWORD: COLUMNS.user ? COLUMNS.user['tempPassword'] : 7
+    }
+  };
+}
+
+// Initialize with static schemas first
+regenerateColumns();
+
+/**
+ * Get current SHEET_SCHEMAS (either static or dynamically loaded)
+ * @returns {Object.<string, SheetSchema>} Current sheet schemas
+ */
+function getSheetSchemas() {
+  return SHEET_SCHEMAS;
+}
+
+/**
+ * Get schema for a specific sheet
+ * @param {string} sheetName - Name of the sheet
+ * @returns {SheetSchema|null} Schema object or null if not found
+ */
+function getSheetSchema(sheetName) {
+  return SHEET_SCHEMAS[sheetName] || null;
 }

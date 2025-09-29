@@ -321,3 +321,99 @@ function validateSheetHeaders(sheetName, expectedHeaders) {
     };
   }
 }
+
+// ==========================================
+// Schema Validation Functions (New)
+// ==========================================
+
+/**
+ * Validate all sheets against their schemas from SHEET_SCHEMAS
+ * @returns {Object} Validation results for all sheets
+ */
+function validateAllSheetsAgainstSchemas() {
+  const results = {};
+  
+  try {
+    const schemas = getSheetSchemas(); // Use new Config.js function
+    
+    Object.keys(schemas).forEach(function(sheetName) {
+      const schema = schemas[sheetName];
+      if (schema && schema.headers) {
+        results[sheetName] = validateSheetHeaders(sheetName, schema.headers);
+        results[sheetName].expectedDataTypes = schema.dataTypes || [];
+      }
+    });
+    
+    return {
+      status: 'success',
+      message: 'Sheet validation completed',
+      results: results
+    };
+    
+  } catch (error) {
+    logError('validateAllSheetsAgainstSchemas', error);
+    return {
+      status: 'error',
+      message: 'Failed to validate sheets: ' + error.toString(),
+      results: {}
+    };
+  }
+}
+
+/**
+ * Validate a specific sheet against its schema
+ * @param {string} sheetName - Name of the sheet to validate
+ * @returns {Object} Detailed validation result
+ */
+function validateSheetAgainstSchema(sheetName) {
+  try {
+    const schema = getSheetSchema(sheetName); // Use new Config.js function
+    
+    if (!schema) {
+      return {
+        status: 'error',
+        message: `No schema found for sheet: ${sheetName}`,
+        validation: null
+      };
+    }
+    
+    const validation = validateSheetHeaders(sheetName, schema.headers);
+    validation.expectedDataTypes = schema.dataTypes || [];
+    
+    return {
+      status: 'success',
+      message: `Validation completed for sheet: ${sheetName}`,
+      validation: validation
+    };
+    
+  } catch (error) {
+    logError('validateSheetAgainstSchema', error, { sheetName });
+    return {
+      status: 'error',
+      message: `Failed to validate sheet ${sheetName}: ${error.toString()}`,
+      validation: null
+    };
+  }
+}
+
+/**
+ * Refresh schemas from Google Sheets and validate all sheets
+ * @returns {Object} Validation results after schema refresh
+ */
+function refreshSchemasAndValidate() {
+  try {
+    console.log('🔄 Refreshing schemas from Google Sheets...');
+    loadSchemasFromSheets(); // Use new Config.js function
+    
+    console.log('✅ Schemas refreshed, validating all sheets...');
+    return validateAllSheetsAgainstSchemas();
+    
+  } catch (error) {
+    logError('refreshSchemasAndValidate', error);
+    return {
+      status: 'error',
+      message: 'Failed to refresh schemas and validate: ' + error.toString(),
+      results: {}
+    };
+  }
+}

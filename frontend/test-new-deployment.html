@@ -75,7 +75,7 @@ Ready to test NEW deployment...
 
     <script>
         // Import the new URL from config.js
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyD5Ps2g6Aee0On9jSeuy4Qsr86FPydGgrjVwZ6OyoOJZrvjjkqf7IMYgFJRdSKb9-3/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwQZdkrjEUpRvclc4IRDoplmeh33inRD5oKoYWeVPniw6GvjEuEWUzGHjQlSPHhqjqu/exec';
         
         function addResult(title, data, isSuccess = false) {
             const resultsDiv = document.getElementById('results');
@@ -146,19 +146,42 @@ Ready to test NEW deployment...
                 const data = await response.json();
                 
                 if (data.status === 'debug') {
-                    addResult('🐛 debugLogin DETAILED', {
-                        status: 'Debug completed',
-                        logs: data.logs,
-                        hashComparison: data.hashComparison,
-                        authResult: data.authResult
+                    // Show step-by-step results
+                    const stepResults = data.results;
+                    let statusEmoji = '�';
+                    let statusMsg = 'Debug Analysis';
+                    
+                    if (stepResults.step1_userFound && stepResults.step2_passwordMatch && stepResults.step3_fullAuth) {
+                        statusEmoji = '🎉';
+                        statusMsg = 'ALL STEPS PASSED!';
+                    } else if (!stepResults.step1_userFound) {
+                        statusEmoji = '❌';
+                        statusMsg = 'USER NOT FOUND';
+                    } else if (!stepResults.step2_passwordMatch) {
+                        statusEmoji = '❌';
+                        statusMsg = 'PASSWORD INCORRECT';
+                    } else if (!stepResults.step3_fullAuth) {
+                        statusEmoji = '⚠️';
+                        statusMsg = 'AUTH FUNCTION ISSUE';
+                    }
+                    
+                    addResult(`${statusEmoji} Step-by-Step Debug`, {
+                        status: statusMsg,
+                        step1_userFound: stepResults.step1_userFound ? '✅ PASS' : '❌ FAIL',
+                        step2_passwordMatch: stepResults.step2_passwordMatch ? '✅ PASS' : '❌ FAIL', 
+                        step3_fullAuth: stepResults.step3_fullAuth ? '✅ PASS' : '❌ FAIL',
+                        userInfo: data.details?.userInfo,
+                        hashComparison: data.details?.hashComparison,
+                        logs: data.logs
                     });
                     
-                    // Check if auth succeeded
-                    if (data.authResult && data.authResult.status === 'success') {
-                        addResult('🎉 FOUND THE SOLUTION!', {
-                            status: 'Authentication works in debug mode!',
-                            message: 'The issue might be in regular login endpoint'
-                        });
+                    // If all steps pass, we found the issue!
+                    if (stepResults.step1_userFound && stepResults.step2_passwordMatch && stepResults.step3_fullAuth) {
+                        addResult('🎉 AUTHENTICATION WORKS!', {
+                            status: 'Problem solved in debug mode',
+                            message: 'Regular login endpoint has different issue',
+                            solution: 'Check regular login vs debug login differences'
+                        }, true);
                     }
                 } else {
                     addResult('⚠️ debugLogin UNEXPECTED', data);

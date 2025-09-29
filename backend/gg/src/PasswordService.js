@@ -104,21 +104,7 @@ function renewAllPasswords() {
     
     const headers = data[0]; // First row is headers
     
-    // Map header names to column indices
-    const headerMap = {};
-    headers.forEach((header, index) => {
-      headerMap[header] = index;
-    });
-    
-    // Get column indices
-    const empIdIndex = headerMap['EmpId'];
-    const emailIndex = headerMap['Email'];
-    const passwordIndex = headerMap['password'];
-    
-    // Validate required columns exist
-    if (empIdIndex === undefined || emailIndex === undefined || passwordIndex === undefined) {
-      throw new Error('ไม่พบคอลัมน์ที่จำเป็น (EmpId, Email, password) ในชีต');
-    }
+    // No need for headerMap anymore - using CONFIG constants
     
     let processedCount = 0;
     let errorCount = 0;
@@ -128,8 +114,8 @@ function renewAllPasswords() {
     for (let i = 1; i < data.length; i++) {
       try {
         const row = data[i];
-        const empId = row[empIdIndex];
-        const email = row[emailIndex];
+        const empId = row[CONFIG.COLUMNS.USER.EMP_ID];
+        const email = row[CONFIG.COLUMNS.USER.EMAIL];
         
         if (!empId || !email) {
           console.warn(`Row ${i + 1}: Missing EmpId or Email, skipping...`);
@@ -141,7 +127,7 @@ function renewAllPasswords() {
         const newPasswordHash = hashPassword(email, empId);
         
         // Update password in the data array
-        data[i][passwordIndex] = newPasswordHash;
+        data[i][CONFIG.COLUMNS.USER.PASSWORD] = newPasswordHash;
         
         processedUsers.push({
           row: i + 1,
@@ -319,24 +305,16 @@ function updateUserPassword(empId) {
     const data = userSheet.getDataRange().getValues();
     const headers = data[0];
     
-    // Map headers to indices
-    const headerMap = {};
-    headers.forEach((header, index) => {
-      headerMap[header] = index;
-    });
-    
-    const empIdIndex = headerMap['EmpId'];
-    const emailIndex = headerMap['Email'];
-    const passwordIndex = headerMap['password'];
+    // Using CONFIG constants instead of headerMap
     
     // Find user row
     let userRowIndex = -1;
     let userEmail = '';
     
     for (let i = 1; i < data.length; i++) {
-      if (data[i][empIdIndex] === empId) {
+      if (data[i][CONFIG.COLUMNS.USER.EMP_ID] === empId) {
         userRowIndex = i;
-        userEmail = data[i][emailIndex];
+        userEmail = data[i][CONFIG.COLUMNS.USER.EMAIL];
         break;
       }
     }
@@ -349,7 +327,7 @@ function updateUserPassword(empId) {
     const newHash = hashPassword(userEmail, empId);
     
     // Update in sheet
-    userSheet.getRange(userRowIndex + 1, passwordIndex + 1).setValue(newHash);
+    userSheet.getRange(userRowIndex + 1, CONFIG.COLUMNS.USER.PASSWORD + 1).setValue(newHash);
     
     console.log(`✅ Updated password for user ${empId}`);
     

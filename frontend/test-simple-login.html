@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Login Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">🔍 Simple Login Debug Test</h1>
+        
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🔑 Test Credentials</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Username:</label>
+                    <input type="text" id="username" value="4498" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password:</label>
+                    <input type="text" id="password" value="likit.se4498" class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <button onclick="testNewCode()" class="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700 font-bold">
+                    🆕 Test New Code
+                </button>
+                <button onclick="testGETLogin()" class="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700">
+                    ✅ GET Login
+                </button>
+                <button onclick="testPOSTLogin()" class="bg-red-600 text-white px-4 py-3 rounded hover:bg-red-700">
+                    ❌ POST Login
+                </button>
+                <button onclick="testDirectAuth()" class="bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700">
+                    🎯 Direct Auth
+                </button>
+            </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📊 Test Results</h2>
+            <div id="results" class="bg-gray-50 p-4 rounded text-xs font-mono h-80 overflow-y-auto whitespace-pre">
+Ready to test login methods...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbziCbUE8b2ZTFdPJgRgUogElWHMqDAsl1DCH_KqVzAFQA-yecthP93GdGdC-_4pyhY5/exec';
+        
+        function addResult(title, data) {
+            const resultsDiv = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const content = `[${timestamp}] ${title}:\n${JSON.stringify(data, null, 2)}\n${'='.repeat(60)}\n\n`;
+            resultsDiv.textContent = content + resultsDiv.textContent;
+        }
+        
+        // Test GET login (known to work)
+        async function testGETLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const url = `${GAS_URL}?action=login&username=${username}&password=${password}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    addResult('✅ GET Login SUCCESS', {
+                        status: 'Working as expected',
+                        user: data.user?.fullName,
+                        token: data.token ? 'Generated' : 'Not generated'
+                    });
+                } else {
+                    addResult('❌ GET Login Failed', data);
+                }
+                
+            } catch (error) {
+                addResult('💥 GET Login ERROR', { error: error.message });
+            }
+        }
+        
+        // Test POST login (known to fail)
+        async function testPOSTLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    addResult('🎉 POST Login SUCCESS!', {
+                        status: data.status,
+                        message: data.message,
+                        user: data.user?.fullName,
+                        token: data.token || 'No token generated',
+                        userDetails: data.user || null
+                    });
+                } else {
+                    addResult('❌ POST Login Failed', {
+                        message: data.message,
+                        debug: data.debug || 'No debug info'
+                    });
+                }
+                
+            } catch (error) {
+                addResult('💥 POST Login ERROR', { error: error.message });
+            }
+        }
+        
+        // Test new code deployment
+        async function testNewCode() {
+            try {
+                const url = `${GAS_URL}?action=testNewCode`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.message.includes('NEW CODE IS DEPLOYED')) {
+                    addResult('🎉 NEW CODE CONFIRMED!', {
+                        status: 'SUCCESS - New deployment is working!',
+                        version: data.version,
+                        features: data.features,
+                        message: 'Ready to test debugLogin and POST login'
+                    });
+                } else {
+                    addResult('❌ OLD CODE Still Active', {
+                        status: 'New deployment not working',
+                        data: data,
+                        suggestion: 'Create another new deployment'
+                    });
+                }
+                
+            } catch (error) {
+                addResult('💥 testNewCode ERROR', { error: error.message });
+            }
+        }
+
+        // Test direct authentication endpoint
+        async function testDirectAuth() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'testDirectAuthentication',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                addResult('🎯 Direct Auth Test', {
+                    status: data.status,
+                    message: data.message,
+                    details: data.details || data
+                });
+                
+            } catch (error) {
+                addResult('💥 Direct Auth ERROR', { error: error.message });
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🎯 Simple Login Test Ready', {
+                gasURL: GAS_URL,
+                credentials: '4498 / likit.se4498',
+                expectation: 'GET should work, POST should fail'
+            });
+        });
+    </script>
+</body>
+</html>

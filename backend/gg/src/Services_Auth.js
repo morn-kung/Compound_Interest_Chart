@@ -26,15 +26,20 @@ function authenticateUser(username, password) {
     // หา user ที่ตรงกับ username หรือ email
     for (let i = 1; i < values.length; i++) {
       const row = values[i];
-      const empId = row[0];
-      const fullName = row[1];
-      const email = row[2];
-      const role = row[3];
-      const userStatus = row[4];
-      const storedPassword = row[5];
+      const empId = row[CONFIG.COLUMNS.USER.EMP_ID];
+      const fullName = row[CONFIG.COLUMNS.USER.FULL_NAME_TH];
+      const email = row[CONFIG.COLUMNS.USER.EMAIL];
+      const role = row[CONFIG.COLUMNS.USER.ROLE];
+      const userStatus = row[CONFIG.COLUMNS.USER.USER_STATUS];
+      const storedPassword = row[CONFIG.COLUMNS.USER.PASSWORD];
       
-      // ตรวจสอบ username (EmpId หรือ Email)
-      if ((empId === username || email === username) && userStatus === 1) {
+      // ตรวจสอบ username (EmpId หรือ Email) - แปลงเป็น string เพื่อหลีกเลี่ยง type mismatch
+      const empIdStr = String(empId);
+      const emailStr = String(email);
+      const usernameStr = String(username);
+      const statusStr = String(userStatus);
+      
+      if ((empIdStr === usernameStr || emailStr === usernameStr) && statusStr === '1') {
         // ตรวจสอบ password ด้วย secure hashing
         const isPasswordValid = verifyPassword(password, email, empId);
         if (isPasswordValid) {
@@ -102,11 +107,34 @@ function generateToken(user) {
  * @returns {boolean} True if token is valid and active
  */
 function verifyToken(token) {
-  // ตัวอย่าง: ดึง token จาก sheet หรือ cache แล้วตรวจสอบ
-  var tokenInfo = getTokenInfo(token);
-  if (!tokenInfo) return false;
-  // ตรวจสอบวันหมดอายุ, user status ฯลฯ
-  return true;
+  try {
+    // ดึง token info จาก sheet
+    var tokenInfo = getTokenInfo(token);
+    if (!tokenInfo) {
+      console.log(`Token not found: ${token}`);
+      return false;
+    }
+    
+    // ตรวจสอบอายุ token (1 ชั่วโมง = 3600000 milliseconds)
+    var tokenCreatedAt = new Date(tokenInfo.createdAt);
+    var now = new Date();
+    var tokenAgeInMs = now.getTime() - tokenCreatedAt.getTime();
+    var oneHourInMs = 60 * 60 * 1000; // 1 ชั่วโมง
+    
+    if (tokenAgeInMs > oneHourInMs) {
+      console.log(`Token expired: ${token}, Age: ${tokenAgeInMs}ms, Created: ${tokenCreatedAt}`);
+      // ลบ token ที่หมดอายุออกจาก sheet
+      removeToken(token);
+      return false;
+    }
+    
+    console.log(`Token valid: ${token}, Age: ${tokenAgeInMs}ms, Remaining: ${oneHourInMs - tokenAgeInMs}ms`);
+    return true;
+    
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    return false;
+  }
 }
 
 /**
@@ -297,13 +325,13 @@ function getUserInfoFromToken(token) {
     const userData = userSheet.getDataRange().getValues();
     
     for (let i = 1; i < userData.length; i++) {
-      if (userData[i][0] === tokenInfo.userId) {
+      if (userData[i][CONFIG.COLUMNS.USER.EMP_ID] === tokenInfo.userId) {
         const user = {
-          id: userData[i][0],
-          fullName: userData[i][1],
-          email: userData[i][2],
-          role: userData[i][3],
-          status: userData[i][4]
+          id: userData[i][CONFIG.COLUMNS.USER.EMP_ID],
+          fullName: userData[i][CONFIG.COLUMNS.USER.FULL_NAME_TH],
+          email: userData[i][CONFIG.COLUMNS.USER.EMAIL],
+          role: userData[i][CONFIG.COLUMNS.USER.ROLE],
+          status: userData[i][CONFIG.COLUMNS.USER.USER_STATUS]
         };
         
         return createJSONResponse('success', 'User information retrieved', { user });

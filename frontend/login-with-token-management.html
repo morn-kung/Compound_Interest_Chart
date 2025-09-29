@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login with Token Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">🔐 Login with Automatic Token Management</h1>
+        
+        <!-- Login Form -->
+        <div id="loginSection" class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">🔑 Login</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Username:</label>
+                    <input type="text" id="username" value="4498" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password:</label>
+                    <input type="password" id="password" value="likit.se4498" class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+            
+            <div class="flex gap-4">
+                <button onclick="login()" class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 font-bold">
+                    🔐 Login
+                </button>
+                <button onclick="logout()" class="bg-red-600 text-white px-6 py-3 rounded hover:bg-red-700">
+                    🚪 Logout
+                </button>
+                <button onclick="testProtectedAPI()" class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700">
+                    🛡️ Test Protected API
+                </button>
+            </div>
+        </div>
+
+        <!-- User Info (shown when logged in) -->
+        <div id="userSection" class="bg-green-50 p-6 rounded-lg shadow mb-6 hidden">
+            <h2 class="text-lg font-semibold mb-4 text-green-800">👤 User Information</h2>
+            <div id="userInfo" class="text-sm"></div>
+            <div class="mt-4">
+                <div class="text-xs text-gray-600">Token expires in: <span id="tokenExpiry" class="font-mono"></span></div>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">📊 System Logs</h2>
+            <div id="results" class="bg-gray-50 p-4 rounded text-xs font-mono h-96 overflow-y-auto whitespace-pre">
+Ready... System will automatically handle token expiration.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbziCbUE8b2ZTFdPJgRgUogElWHMqDAsl1DCH_KqVzAFQA-yecthP93GdGdC-_4pyhY5/exec';
+        
+        // Token Management System
+        let currentToken = null;
+        let currentUser = null;
+        let tokenExpiry = null;
+        let expiryCheckInterval = null;
+
+        // Load saved token from localStorage
+        function loadSavedToken() {
+            const saved = localStorage.getItem('authData');
+            if (saved) {
+                try {
+                    const authData = JSON.parse(saved);
+                    currentToken = authData.token;
+                    currentUser = authData.user;
+                    tokenExpiry = new Date(authData.expiry);
+                    
+                    // Check if still valid
+                    if (new Date() < tokenExpiry) {
+                        showUserInfo();
+                        startExpiryCountdown();
+                        addResult('🔄 Restored Token', { 
+                            user: currentUser.fullName,
+                            expires: tokenExpiry.toLocaleString()
+                        });
+                    } else {
+                        addResult('⏰ Saved Token Expired', { message: 'Please login again' });
+                        clearAuthData();
+                    }
+                } catch (e) {
+                    addResult('❌ Invalid Saved Token', { error: e.message });
+                    clearAuthData();
+                }
+            }
+        }
+
+        // Save token to localStorage
+        function saveAuthData(token, user) {
+            tokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+            const authData = {
+                token: token,
+                user: user,
+                expiry: tokenExpiry.toISOString()
+            };
+            localStorage.setItem('authData', JSON.stringify(authData));
+        }
+
+        // Clear authentication data
+        function clearAuthData() {
+            currentToken = null;
+            currentUser = null;
+            tokenExpiry = null;
+            localStorage.removeItem('authData');
+            hideUserInfo();
+            if (expiryCheckInterval) {
+                clearInterval(expiryCheckInterval);
+                expiryCheckInterval = null;
+            }
+        }
+
+        // Login function
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                addResult('❌ Login Error', { message: 'Please enter both username and password' });
+                return;
+            }
+
+            try {
+                addResult('🔄 Logging in...', { username: username });
+                
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'login',
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    currentToken = data.token;
+                    currentUser = data.user;
+                    
+                    // Save to localStorage
+                    saveAuthData(data.token, data.user);
+                    
+                    // Show user info
+                    showUserInfo();
+                    
+                    // Start countdown
+                    startExpiryCountdown();
+                    
+                    addResult('🎉 Login SUCCESS!', {
+                        user: data.user.fullName,
+                        token: data.token.substring(0, 20) + '...',
+                        expires: tokenExpiry.toLocaleString()
+                    });
+                    
+                } else {
+                    addResult('❌ Login Failed', {
+                        message: data.message,
+                        debug: data.debug?.message || 'No debug info'
+                    });
+                }
+                
+            } catch (error) {
+                addResult('💥 Login ERROR', { error: error.message });
+            }
+        }
+
+        // Logout function
+        async function logout() {
+            if (!currentToken) {
+                addResult('ℹ️ Not logged in', { message: 'No active session' });
+                return;
+            }
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'logout',
+                        token: currentToken
+                    })
+                });
+                
+                const data = await response.json();
+                addResult('🚪 Logout', data);
+                
+            } catch (error) {
+                addResult('💥 Logout ERROR', { error: error.message });
+            } finally {
+                clearAuthData();
+                addResult('✅ Logged out locally', { message: 'Token cleared' });
+            }
+        }
+
+        // Test protected API (this will trigger token validation)
+        async function testProtectedAPI() {
+            if (!currentToken) {
+                addResult('🔒 No Token', { message: 'Please login first' });
+                return;
+            }
+
+            try {
+                addResult('🛡️ Testing Protected API...', { token: currentToken.substring(0, 20) + '...' });
+                
+                const response = await fetch(`${GAS_URL}?action=getUserInfo&token=${currentToken}`);
+                const data = await response.json();
+                
+                if (data.status === 'error' && data.message.includes('expired')) {
+                    // Token expired!
+                    addResult('⏰ TOKEN EXPIRED!', { message: 'Auto-redirecting to login...' });
+                    handleTokenExpiry();
+                } else {
+                    addResult('✅ Protected API Success', data);
+                }
+                
+            } catch (error) {
+                addResult('💥 Protected API ERROR', { error: error.message });
+            }
+        }
+
+        // Handle token expiry
+        function handleTokenExpiry() {
+            addResult('🔄 Token Expired - Auto Logout', { message: 'Please login again' });
+            clearAuthData();
+            alert('Your session has expired. Please login again.');
+        }
+
+        // Show user info panel
+        function showUserInfo() {
+            if (currentUser) {
+                document.getElementById('userSection').classList.remove('hidden');
+                document.getElementById('userInfo').innerHTML = `
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><strong>Name:</strong> ${currentUser.fullName}</div>
+                        <div><strong>ID:</strong> ${currentUser.id}</div>
+                        <div><strong>Email:</strong> ${currentUser.email}</div>
+                        <div><strong>Role:</strong> ${currentUser.role}</div>
+                        <div><strong>Token:</strong> ${currentToken.substring(0, 30)}...</div>
+                        <div><strong>Status:</strong> <span class="text-green-600">Active</span></div>
+                    </div>
+                `;
+            }
+        }
+
+        // Hide user info panel
+        function hideUserInfo() {
+            document.getElementById('userSection').classList.add('hidden');
+        }
+
+        // Start expiry countdown
+        function startExpiryCountdown() {
+            if (expiryCheckInterval) clearInterval(expiryCheckInterval);
+            
+            expiryCheckInterval = setInterval(() => {
+                if (!tokenExpiry) return;
+                
+                const now = new Date();
+                const timeLeft = tokenExpiry.getTime() - now.getTime();
+                
+                if (timeLeft <= 0) {
+                    // Token expired
+                    document.getElementById('tokenExpiry').textContent = 'EXPIRED';
+                    handleTokenExpiry();
+                } else {
+                    // Show remaining time
+                    const minutes = Math.floor(timeLeft / 60000);
+                    const seconds = Math.floor((timeLeft % 60000) / 1000);
+                    document.getElementById('tokenExpiry').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    // Warning when < 5 minutes
+                    if (timeLeft < 5 * 60 * 1000) {
+                        document.getElementById('tokenExpiry').className = 'font-mono text-red-600 font-bold';
+                        
+                        // Auto-refresh warning
+                        if (timeLeft < 60 * 1000) { // < 1 minute
+                            if (confirm('Your session will expire in less than 1 minute. Refresh token?')) {
+                                // Re-login automatically
+                                login();
+                            }
+                        }
+                    }
+                }
+            }, 1000);
+        }
+
+        // Add result to log
+        function addResult(title, data) {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${title}\n${JSON.stringify(data, null, 2)}\n\n`;
+            results.textContent += logEntry;
+            results.scrollTop = results.scrollHeight;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('🚀 System Initialized', { 
+                message: 'Token Management System Ready',
+                features: ['Auto-expiry detection', 'Token refresh', 'Local storage']
+            });
+            
+            // Load saved token if exists
+            loadSavedToken();
+        });
+
+        // Handle page visibility change (user comes back to tab)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && currentToken) {
+                // Check if token is still valid when user returns
+                testProtectedAPI();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -75,29 +75,19 @@ function findUserByEmail(email) {
     const data = userSheet.getDataRange().getValues();
     const headers = data[0];
     
-    // Map headers
-    const headerMap = {};
-    headers.forEach((header, index) => {
-      headerMap[header] = index;
-    });
-    
-    const empIdIndex = headerMap['EmpId'];
-    const emailIndex = headerMap['Email'];
-    const fullNameIndex = headerMap['FullNameTH'];
-    const roleIndex = headerMap['Role'];
-    const statusIndex = headerMap['Userstatus'];
+    // Using CONFIG constants for column access
     
     // Search for user
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (row[emailIndex] && row[emailIndex].toLowerCase() === email.toLowerCase()) {
+      if (row[CONFIG.COLUMNS.USER.EMAIL] && row[CONFIG.COLUMNS.USER.EMAIL].toLowerCase() === email.toLowerCase()) {
         return {
           found: true,
-          empId: row[empIdIndex],
-          email: row[emailIndex],
-          fullName: row[fullNameIndex],
-          role: row[roleIndex],
-          status: row[statusIndex],
+          empId: String(row[CONFIG.COLUMNS.USER.EMP_ID]), // แปลงเป็น String เพื่อป้องกัน type mismatch
+          email: String(row[CONFIG.COLUMNS.USER.EMAIL]),
+          fullName: String(row[CONFIG.COLUMNS.USER.FULL_NAME_TH]),
+          role: String(row[CONFIG.COLUMNS.USER.ROLE]),
+          status: String(row[CONFIG.COLUMNS.USER.USER_STATUS]),
           rowIndex: i
         };
       }
@@ -119,7 +109,7 @@ function findUserByEmail(email) {
  */
 function resetUserPassword(empId, email) {
   try {
-    console.log(`🔑 Resetting password for user: ${empId}`);
+    console.log(`🔑 Resetting password for user: ${empId} (SAP Style - Temporary Password)`);
     
     if (!empId || !email) {
       throw new Error('EmpId และ Email จำเป็นต้องระบุ');
@@ -132,15 +122,9 @@ function resetUserPassword(empId, email) {
       throw new Error(`ไม่พบชีต "${CONFIG.SHEETS.USER}"`);
     }
     
-    // Extract email prefix (part before @)
-    if (!email.includes('@')) {
-      throw new Error('รูปแบบ email ไม่ถูกต้อง');
-    }
-    
-    const emailPrefix = email.split('@')[0];
-    
-    // Create password string (same logic as renew_password_safe.js)
-    const passwordString = emailPrefix + empId;
+    // *** SAP STYLE: ใช้รหัสผ่านชั่วคราวแทน ***
+    // เปลี่ยนจาก emailPrefix + empId เป็น รหัสผ่านชั่วคราวคงที่
+    const passwordString = 'Init4321'; // รหัสผ่านชั่วคราวเหมือน SAP
     
     // Generate SHA-256 hash
     const passwordHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, passwordString)
@@ -151,19 +135,19 @@ function resetUserPassword(empId, email) {
     const data = userSheet.getDataRange().getValues();
     const headers = data[0];
     
-    const headerMap = {};
-    headers.forEach((header, index) => {
-      headerMap[header] = index;
-    });
-    
-    const empIdIndex = headerMap['EmpId'];
-    const passwordIndex = headerMap['password'];
+    // Using CONFIG constants for column access
     
     // Find and update user row
     let updated = false;
     for (let i = 1; i < data.length; i++) {
-      if (data[i][empIdIndex] === empId) {
-        data[i][passwordIndex] = passwordHash;
+      // แปลงทั้งสองค่าเป็น String เพื่อป้องกัน type mismatch
+      if (String(data[i][CONFIG.COLUMNS.USER.EMP_ID]) === String(empId)) {
+        data[i][CONFIG.COLUMNS.USER.PASSWORD] = passwordHash;
+        
+        // *** SAP STYLE: บังคับให้เปลี่ยนรหัสผ่านในครั้งถัดไป ***
+        data[i][CONFIG.COLUMNS.USER.REQUIRE_PASSWORD_CHANGE] = true; // บังคับเปลี่ยนรหัสผ่าน
+        data[i][CONFIG.COLUMNS.USER.TEMP_PASSWORD] = true; // แมร์คว่าเป็น temp password
+        
         updated = true;
         break;
       }
@@ -178,18 +162,93 @@ function resetUserPassword(empId, email) {
     
     console.log(`✅ Password reset successful for user ${empId}`);
     
-    return createJSONResponse('success', 'รีเซ็ตรหัสผ่านสำเร็จ', {
+    return createJSONResponse('success', 'รีเซ็ตรหัสผ่านเป็นรหัสชั่วคราวสำเร็จ', {
       empId: empId,
       email: email,
-      emailPrefix: emailPrefix,
-      passwordString: passwordString, // For email notification
+      temporaryPassword: passwordString, // *** เปลี่ยนจาก emailPrefix เป็น temporaryPassword ***
       passwordHash: passwordHash,
+      requirePasswordChange: true, // *** เพิ่มข้อมูลว่าต้องเปลี่ยนรหัส ***
       resetAt: new Date().toISOString()
     });
     
   } catch (error) {
     console.error('Error resetting user password:', error);
     return createJSONResponse('error', `เกิดข้อผิดพลาด: ${error.toString()}`);
+  }
+}
+
+/**
+ * Change user password (SAP Style - after temporary password login)
+ * @param {string} empId - Employee ID
+ * @param {string} currentPassword - Current temporary password
+ * @param {string} newPassword - New password chosen by user
+ * @returns {Object} Change password result
+ */
+function changeUserPassword(empId, currentPassword, newPassword) {
+  try {
+    console.log(`🔄 Changing password for user: ${empId}`);
+    
+    const spreadsheet = getSpreadsheetSafely();
+    const userSheet = spreadsheet.getSheetByName(CONFIG.SHEETS.USER);
+    
+    if (!userSheet) {
+      throw new Error(`ไม่พบชีต "${CONFIG.SHEETS.USER}"`);
+    }
+    
+    const data = userSheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    // Using CONFIG constants for column access
+    
+    // Find user
+    let userRowIndex = -1;
+    let userRow = null;
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][CONFIG.COLUMNS.USER.EMP_ID]) === String(empId)) {
+        userRowIndex = i;
+        userRow = data[i];
+        break;
+      }
+    }
+    
+    if (!userRow) {
+      throw new Error(`ไม่พบผู้ใช้ EmpId: ${empId}`);
+    }
+    
+    // Verify current password (should be Init4321 hash)
+    const currentPasswordHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, currentPassword)
+                                         .map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'))
+                                         .join('');
+    
+    if (userRow[CONFIG.COLUMNS.USER.PASSWORD] !== currentPasswordHash) {
+      throw new Error('รหัสผ่านปัจจุบันไม่ถูกต้อง');
+    }
+    
+    // Hash new password
+    const newPasswordHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, newPassword)
+                                     .map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'))
+                                     .join('');
+    
+    // Update password and clear requirePasswordChange flag
+    data[userRowIndex][CONFIG.COLUMNS.USER.PASSWORD] = newPasswordHash;
+    data[userRowIndex][CONFIG.COLUMNS.USER.REQUIRE_PASSWORD_CHANGE] = false; // *** ไม่ต้องเปลี่ยนรหัสแล้ว ***
+    data[userRowIndex][CONFIG.COLUMNS.USER.TEMP_PASSWORD] = false; // *** ไม่ใช่ temp password แล้ว ***
+    
+    // Write back to sheet
+    userSheet.getDataRange().setValues(data);
+    
+    console.log(`✅ Password changed successfully for user ${empId}`);
+    
+    return createJSONResponse('success', 'เปลี่ยนรหัสผ่านสำเร็จ', {
+      empId: empId,
+      message: 'รหัสผ่านใหม่ถูกบันทึกแล้ว กรุณา login ด้วยรหัสผ่านใหม่',
+      changedAt: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error changing password:', error);
+    return createJSONResponse('error', error.message);
   }
 }
 
@@ -202,34 +261,38 @@ function resetUserPassword(empId, email) {
 function sendPasswordResetEmail(userInfo, resetResult) {
   try {
     console.log(`📧 Sending password reset email to: ${userInfo.email}`);
+    console.log(`📧 Reset result structure:`, JSON.stringify(resetResult, null, 2));
     
-    const subject = 'รหัสผ่านใหม่สำหรับระบบ Trading Journal';
+    const subject = 'รหัสผ่านชั่วคราวสำหรับระบบ Trading Journal';
     
-    // สร้างเนื้อหา email
+    // สร้างเนื้อหา email แบบ SAP Style
     const emailBody = `
 เรียน คุณ${userInfo.fullName},
 
 คุณได้ขอรีเซ็ตรหัสผ่านสำหรับระบบ Trading Journal
 
-รายละเอียดการเข้าสู่ระบบใหม่:
+รายละเอียดการเข้าสู่ระบบ:
 - รหัสผู้ใช้: ${userInfo.empId}
 - Email: ${userInfo.email}
-- รหัสผ่านใหม่: ${resetResult.data.passwordString}
+- รหัสผ่านชั่วคราว: ${resetResult.temporaryPassword || resetResult.data?.temporaryPassword || 'Init4321'}
 
-กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่นี้
-
-หมายเหตุ: รหัสผ่านนี้ถูกสร้างจาก "${resetResult.data.emailPrefix}" + "${userInfo.empId}"
+⚠️ สำคัญ:
+- รหัสผ่านนี้เป็นรหัสชั่วคราว
+- เมื่อเข้าสู่ระบบครั้งแรก ระบบจะบังคับให้เปลี่ยนรหัสผ่านใหม่
+- กรุณาเตรียมรหัสผ่านใหม่ที่คุณต้องการใช้
+- รหัสผ่านใหม่ควรมีความยาวอย่างน้อย 8 ตัวอักษร
 
 ---
 ส่งอัตโนมัติจากระบบ Trading Journal
 เวลา: ${new Date().toLocaleString('th-TH')}
     `.trim();
     
-    // ส่ง email
+    // ส่ง email (จะส่งจาก Google Account ของเจ้าของ Google Apps Script)
     MailApp.sendEmail({
       to: userInfo.email,
       subject: subject,
-      body: emailBody
+      body: emailBody,
+      name: 'Trading Journal System' // ชื่อผู้ส่งที่จะแสดง
     });
     
     console.log(`✅ Password reset email sent successfully to ${userInfo.email}`);
@@ -267,16 +330,7 @@ function bulkPasswordReset() {
     }
     
     const headers = data[0];
-    const headerMap = {};
-    headers.forEach((header, index) => {
-      headerMap[header] = index;
-    });
-    
-    const empIdIndex = headerMap['EmpId'];
-    const emailIndex = headerMap['Email'];
-    const fullNameIndex = headerMap['FullNameTH'];
-    const passwordIndex = headerMap['password'];
-    const statusIndex = headerMap['Userstatus'];
+    // Using CONFIG constants instead of headerMap
     
     const results = {
       processed: 0,
@@ -289,10 +343,10 @@ function bulkPasswordReset() {
     for (let i = 1; i < data.length; i++) {
       try {
         const row = data[i];
-        const empId = row[empIdIndex];
-        const email = row[emailIndex];
-        const fullName = row[fullNameIndex];
-        const status = row[statusIndex];
+        const empId = row[CONFIG.COLUMNS.USER.EMP_ID];
+        const email = row[CONFIG.COLUMNS.USER.EMAIL];
+        const fullName = row[CONFIG.COLUMNS.USER.FULL_NAME_TH];
+        const status = row[CONFIG.COLUMNS.USER.USER_STATUS];
         
         // Skip inactive users
         if (status !== 1) {
