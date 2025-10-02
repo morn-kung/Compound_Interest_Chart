@@ -105,6 +105,16 @@ function handleGetRequest(e) {
   const params = e.parameter;
   const action = params.action;
   
+  // Debug logging for resetPassword
+  if (action === 'resetPassword') {
+    console.log('🔍 GET resetPassword request received:', {
+      action: action,
+      email: params.email,
+      testMode: params.testMode,
+      allParams: params
+    });
+  }
+  
   // Public endpoints (no authentication required)
   const publicEndpoints = [
     'login',                    // 🔥 LOGIN ENDPOINT (redirects to POST)
@@ -120,7 +130,12 @@ function handleGetRequest(e) {
     'testDirectAuthentication',
     'debugPOST',
     'debugLogin',
-    'testNewCode'
+    'testNewCode',
+    // Test Mode GET endpoints
+    'getTestModeInfo',
+    'debugPassword',
+    'testTempPassword',
+    'resetPassword'
   ];
   
   // Check authentication for protected endpoints
@@ -472,6 +487,59 @@ function handleGetRequest(e) {
         timestamp: new Date().toISOString()
       })).setMimeType(ContentService.MimeType.JSON);
 
+    // Test Mode GET endpoints
+    case 'getTestModeInfo':
+      const empId = params.empId || '4498';
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        message: 'Test Mode Information',
+        testMode: true,
+        debugInfo: {
+          empId: empId,
+          expectedTempPassword: 'Init4321',
+          expectedTempPasswordHash: '0f34ff62ae49b390d17fae50c11e821b592af11419973524e4ee437b1486f52a',
+          regularPasswordFormat: 'emailPrefix + empId (e.g., likit.se4498)',
+          sheets: {
+            userSheet: CONFIG.SHEETS.USER,
+            columns: CONFIG.COLUMNS.USER
+          },
+          timestamp: new Date().toISOString()
+        }
+      })).setMimeType(ContentService.MimeType.JSON);
+
+    case 'debugPassword':
+      const debugTestEmpId = params.empId || '4498';
+      const debugTestPassword = params.password || 'Init4321';
+      const passwordDebugResult = debugPasswordIssues(debugTestEmpId, debugTestPassword);
+      return ContentService.createTextOutput(JSON.stringify(passwordDebugResult))
+                          .setMimeType(ContentService.MimeType.JSON);
+
+    case 'testTempPassword':
+      const tempTestEmpId = params.empId || '4498';
+      const tempPasswordResult = testTemporaryPasswordLogin(tempTestEmpId);
+      return ContentService.createTextOutput(JSON.stringify(tempPasswordResult))
+                          .setMimeType(ContentService.MimeType.JSON);
+
+    case 'resetPassword':
+      const resetEmail = params.email;
+      const isTestMode = params.testMode === 'true';
+      let resetResult = requestPasswordReset(resetEmail);
+      
+      // Enhanced response in Test Mode
+      if (isTestMode) {
+        resetResult.testMode = true;
+        resetResult.debugInfo = {
+          requestTime: new Date().toISOString(),
+          email: resetEmail,
+          expectedTempPassword: 'Init4321',
+          expectedTempPasswordHash: '0f34ff62ae49b390d17fae50c11e821b592af11419973524e4ee437b1486f52a',
+          message: 'Test Mode: Enhanced debugging enabled'
+        };
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify(resetResult))
+                          .setMimeType(ContentService.MimeType.JSON);
+
     default:
       return ContentService.createTextOutput(JSON.stringify({
         status: "error",
@@ -499,6 +567,15 @@ function handlePostRequest(e) {
   const username = getParam('username');
   const password = getParam('password');
   const token = getParam('token');
+  const testMode = getParam('testMode') === 'true'; // Test Mode flag
+  
+  // Enhanced logging when in Test Mode
+  if (testMode) {
+    console.log('🧪 TEST MODE ENABLED - Enhanced Debug Logging');
+  }
+  
+  // CRITICAL: Log the actual action received
+  console.log('🎯 CRITICAL DEBUG - Action received:', action, 'Type:', typeof action);
   
   // Log received parameters for debugging
   console.log('🔍 POST Request Debug:', {
@@ -506,6 +583,7 @@ function handlePostRequest(e) {
     username: username,
     password: password ? '[HIDDEN]' : null,
     token: token ? '[HIDDEN]' : null,
+    testMode: testMode,
     hasParameters: !!e.parameters,
     hasParameter: !!e.parameter,
     parameterKeys: e.parameter ? Object.keys(e.parameter) : [],
@@ -551,6 +629,44 @@ function handlePostRequest(e) {
     return ContentService.createTextOutput(JSON.stringify(debugResult))
                         .setMimeType(ContentService.MimeType.JSON);
   }
+
+  // Handle Test Mode info endpoint (public)
+  if (action === 'getTestModeInfo') {
+    const empId = getParam('empId') || '4498';
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: 'Test Mode Information',
+      testMode: true,
+      debugInfo: {
+        empId: empId,
+        expectedTempPassword: 'Init4321',
+        expectedTempPasswordHash: '0f34ff62ae49b390d17fae50c11e821b592af11419973524e4ee437b1486f52a',
+        regularPasswordFormat: 'emailPrefix + empId (e.g., likit.se4498)',
+        sheets: {
+          userSheet: CONFIG.SHEETS.USER,
+          columns: CONFIG.COLUMNS.USER
+        },
+        timestamp: new Date().toISOString()
+      }
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Handle password debug analysis (public endpoint for test mode)
+  if (action === 'debugPassword') {
+    const debugEmpId = getParam('empId') || '4498';
+    const debugPassword = getParam('password') || 'Init4321';
+    const result = debugPasswordIssues(debugEmpId, debugPassword);
+    return ContentService.createTextOutput(JSON.stringify(result))
+                        .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Handle temporary password test (public endpoint)
+  if (action === 'testTempPassword') {
+    const testEmpId = getParam('empId') || '4498';
+    const result = testTemporaryPasswordLogin(testEmpId);
+    return ContentService.createTextOutput(JSON.stringify(result))
+                        .setMimeType(ContentService.MimeType.JSON);
+  }
   
   // Handle login request (PUBLIC - main login endpoint)
   if (action === 'login') {
@@ -575,17 +691,24 @@ function handlePostRequest(e) {
                           .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 🎯 ENHANCED LOGIN WITH DETAILED DEBUG
+    // 🎯 ENHANCED LOGIN WITH DETAILED DEBUG (Enhanced in Test Mode)
     try {
       // Step 1: Check if user exists
       const sheet = getSheet(CONFIG.SHEETS.USER);
       const values = sheet.getDataRange().getValues();
       
-      // 🔍 DEBUG: Log sheet data for troubleshooting
-      console.log('🔍 POST LOGIN DEBUG - Sheet Data Analysis:');
-      console.log('📊 Total rows:', values.length);
-      console.log('📋 Headers:', values[0]);
-      console.log('🔍 Looking for username:', username, 'Type:', typeof username);
+      // 🔍 DEBUG: Log sheet data for troubleshooting (Enhanced in Test Mode)
+      if (testMode) {
+        console.log('🧪 TEST MODE - Detailed Sheet Analysis:');
+        console.log('📊 Total rows:', values.length);
+        console.log('📋 Headers:', values[0]);
+        console.log('🔍 Looking for username:', username, 'Type:', typeof username);
+        console.log('🔍 CONFIG.COLUMNS.USER:', CONFIG.COLUMNS.USER);
+      } else {
+        console.log('🔍 POST LOGIN DEBUG - Sheet Data Analysis:');
+        console.log('📊 Total rows:', values.length);
+        console.log('🔍 Looking for username:', username, 'Type:', typeof username);
+      }
       
       let userFound = false;
       let userRow = null;
@@ -925,7 +1048,58 @@ function handlePostRequest(e) {
   // Handle password reset request (public endpoint)
   if (action === 'resetPassword') {
     const email = getParam('email');
-    const result = requestPasswordReset(email);
+    let result = requestPasswordReset(email);
+    
+    // Enhanced response in Test Mode
+    if (testMode) {
+      result.testMode = true;
+      result.debugInfo = {
+        requestTime: new Date().toISOString(),
+        email: email,
+        expectedTempPassword: 'Init4321',
+        expectedTempPasswordHash: '0f34ff62ae49b390d17fae50c11e821b592af11419973524e4ee437b1486f52a',
+        message: 'Test Mode: Enhanced debugging enabled'
+      };
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify(result))
+                        .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Handle Test Mode info endpoint (public)
+  if (action === 'getTestModeInfo') {
+    const empId = getParam('empId') || '4498';
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: 'Test Mode Information',
+      testMode: true,
+      debugInfo: {
+        empId: empId,
+        expectedTempPassword: 'Init4321',
+        expectedTempPasswordHash: '0f34ff62ae49b390d17fae50c11e821b592af11419973524e4ee437b1486f52a',
+        regularPasswordFormat: 'emailPrefix + empId (e.g., likit.se4498)',
+        sheets: {
+          userSheet: CONFIG.SHEETS.USER,
+          columns: CONFIG.COLUMNS.USER
+        },
+        timestamp: new Date().toISOString()
+      }
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Handle password debug analysis (public endpoint for test mode)
+  if (action === 'debugPassword') {
+    const debugEmpId = getParam('empId') || '4498';
+    const debugPassword = getParam('password') || 'Init4321';
+    const result = debugPasswordIssues(debugEmpId, debugPassword);
+    return ContentService.createTextOutput(JSON.stringify(result))
+                        .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Handle temporary password test (public endpoint)
+  if (action === 'testTempPassword') {
+    const testEmpId = getParam('empId') || '4498';
+    const result = testTemporaryPasswordLogin(testEmpId);
     return ContentService.createTextOutput(JSON.stringify(result))
                         .setMimeType(ContentService.MimeType.JSON);
   }
@@ -944,6 +1118,10 @@ function handlePostRequest(e) {
                         .setMimeType(ContentService.MimeType.JSON);
   }
   
+  // ==========================================
+  // AUTHENTICATED ENDPOINTS (Require Token)
+  // ==========================================
+  
   // Handle batch trading records submission
   if (action === 'addMultipleTrades') {
     // Create params object for authentication
@@ -961,34 +1139,49 @@ function handlePostRequest(e) {
   }
   
   // Handle single trading record submission (backward compatibility)
-  // Check if token is provided for authentication
-  if (token) {
-    const authParams = { token: token };
-    const authResult = authenticateRequest(authParams);
-    if (authResult.status === 'error') {
-      return ContentService.createTextOutput(JSON.stringify(authResult))
-                          .setMimeType(ContentService.MimeType.JSON);
+  if (action === 'addTrade') {
+    // Check if token is provided for authentication
+    if (token) {
+      const authParams = { token: token };
+      const authResult = authenticateRequest(authParams);
+      if (authResult.status === 'error') {
+        return ContentService.createTextOutput(JSON.stringify(authResult))
+                            .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // Verify access to the account
+      const accountId = getParam('accountId');
+      const accessResult = verifyAccountAccess(token, accountId);
+      if (accessResult.status === 'error') {
+        return ContentService.createTextOutput(JSON.stringify(accessResult))
+                            .setMimeType(ContentService.MimeType.JSON);
+      }
     }
     
-    // Verify access to the account
-    const accountId = getParam('accountId');
-    const accessResult = verifyAccountAccess(token, accountId);
-    if (accessResult.status === 'error') {
-      return ContentService.createTextOutput(JSON.stringify(accessResult))
-                          .setMimeType(ContentService.MimeType.JSON);
-    }
+    const result = addTrade(
+      getParam('accountId'),
+      getParam('assetId'),
+      parseFloat(getParam('startBalance') || '0'),
+      parseFloat(getParam('dailyProfit') || '0'),
+      parseFloat(getParam('lotSize') || '0'),
+      getParam('notes') || '',
+      getParam('tradeDate') || ''
+    );
+    
+    return ContentService.createTextOutput(JSON.stringify(result))
+                        .setMimeType(ContentService.MimeType.JSON);
   }
-  
-  const result = addTrade(
-    getParam('accountId'),
-    getParam('assetId'),
-    parseFloat(getParam('startBalance') || '0'),
-    parseFloat(getParam('dailyProfit') || '0'),
-    parseFloat(getParam('lotSize') || '0'),
-    getParam('notes') || '',
-    getParam('tradeDate') || ''
-  );
-  
-  return ContentService.createTextOutput(JSON.stringify(result))
-                      .setMimeType(ContentService.MimeType.JSON);
+
+  // Default handler for unknown actions
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'error',
+    message: `Unknown action: ${action}`,
+    availableActions: [
+      'login', 'logout', 'resetPassword', 'changePassword',
+      'getTestModeInfo', 'debugPassword', 'testTempPassword',
+      'addTrade', 'addMultipleTrades', 'debugPOST'
+    ],
+    testMode: testMode,
+    timestamp: new Date().toISOString()
+  })).setMimeType(ContentService.MimeType.JSON);
 }

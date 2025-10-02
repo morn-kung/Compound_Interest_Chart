@@ -9,12 +9,15 @@
 
 /**
  * Authenticate user with username/email and password
+ * Supports both regular passwords and temporary password (Init4321)
  * @param {string} username - Username or email address
  * @param {string} password - Plain text password or password hash
  * @returns {AuthResult} Authentication result with user data and token
  */
 function authenticateUser(username, password) {
   try {
+    console.log('🔐 Starting authentication for:', username);
+    
     // ดึงข้อมูล user จาก USER sheet
     const sheet = getSheet(CONFIG.SHEETS.USER);
     const values = sheet.getDataRange().getValues();
@@ -32,6 +35,8 @@ function authenticateUser(username, password) {
       const role = row[CONFIG.COLUMNS.USER.ROLE];
       const userStatus = row[CONFIG.COLUMNS.USER.USER_STATUS];
       const storedPassword = row[CONFIG.COLUMNS.USER.PASSWORD];
+      const requirePasswordChange = row[CONFIG.COLUMNS.USER.REQUIRE_PASSWORD_CHANGE];
+      const tempPasswordFlag = row[CONFIG.COLUMNS.USER.TEMP_PASSWORD];
       
       // ตรวจสอบ username (EmpId หรือ Email) - แปลงเป็น string เพื่อหลีกเลี่ยง type mismatch
       const empIdStr = String(empId);
@@ -40,9 +45,14 @@ function authenticateUser(username, password) {
       const statusStr = String(userStatus);
       
       if ((empIdStr === usernameStr || emailStr === usernameStr) && statusStr === '1') {
-        // ตรวจสอบ password ด้วย secure hashing
-        const isPasswordValid = verifyPassword(password, email, empId);
+        console.log('👤 User found:', empIdStr, 'Status:', statusStr);
+        
+        // ตรวจสอบ password ด้วย secure hashing (รองรับ temporary password)
+        const isPasswordValid = verifyPassword(password, email, empId, true);
+        
         if (isPasswordValid) {
+          console.log('✅ Password verification successful');
+          
           // สร้าง user object
           const user = {
             id: empId,
@@ -52,13 +62,28 @@ function authenticateUser(username, password) {
             status: userStatus
           };
           
-          // สร้าง token
+          // *** ตรวจสอบว่าต้องเปลี่ยนรหัสผ่านหรือไม่ (SAP Style) ***
+          if (requirePasswordChange === true || String(requirePasswordChange) === 'true' || tempPasswordFlag === true || String(tempPasswordFlag) === 'true') {
+            console.log('🔄 Password change required for user:', empIdStr);
+            
+            return createJSONResponse('password_change_required', 'กรุณาเปลี่ยนรหัสผ่านก่อนเข้าใช้งาน', {
+              user: user,
+              action: 'change_password',
+              redirectTo: 'change-password.html',
+              message: 'ระบบต้องการให้คุณเปลี่ยนรหัสผ่านจากรหัสชั่วคราว'
+            });
+          }
+          
+          // สร้าง token สำหรับ login ปกติ
           const token = generateToken(user);
+          console.log('🎫 Token generated for user:', empIdStr);
           
           return createJSONResponse('success', 'เข้าสู่ระบบสำเร็จ', {
             user: user,
             token: token
           });
+        } else {
+          console.log('❌ Password verification failed for user:', empIdStr);
         }
       }
     }

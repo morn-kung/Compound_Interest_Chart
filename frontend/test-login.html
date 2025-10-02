@@ -10,6 +10,16 @@
     <div class="max-w-2xl mx-auto">
         <h1 class="text-2xl font-bold mb-6">🔍 Test Login Connection to GAS</h1>
         
+        <!-- API Info -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h3 class="font-semibold text-blue-800 mb-2">📡 API Configuration</h3>
+            <div class="text-sm text-blue-700">
+                <div><strong>Production URL:</strong> <span id="apiBaseDisplay">Loading...</span></div>
+                <div><strong>Test URL:</strong> <span id="apiTestDisplay">Loading...</span></div>
+                <div><strong>Mode:</strong> <span class="font-semibold text-green-600">Production Mode</span></div>
+            </div>
+        </div>
+        
         <!-- Test Form -->
         <div class="bg-white p-6 rounded-lg shadow mb-6">
             <h2 class="text-lg font-semibold mb-4">Login Test Form</h2>
@@ -17,7 +27,7 @@
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Username:</label>
-                        <input type="text" id="username" value="4498" 
+                        <input type="text" id="username" value="likit.se@irpc.co.th" 
                                class="w-full border rounded px-3 py-2">
                     </div>
                     <div>
@@ -29,8 +39,8 @@
                 <div class="mb-4">
                     <label class="block text-sm font-medium mb-1">GAS URL:</label>
                     <input type="text" id="gasUrl" 
-                           value="https://script.google.com/macros/s/AKfycbw4MK7BupKGaWI92A05pkHU8j5gGs2Krls7K4oEaqUEAuIR-xOi26TZw-58s3rBZKgo/exec"
-                           class="w-full border rounded px-3 py-2 text-sm">
+                           value="Loading from config.js..."
+                           class="w-full border rounded px-3 py-2 text-sm" readonly>
                 </div>
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                     🧪 Test Login
@@ -47,6 +57,22 @@
         </div>
     </div>
 
+    <script type="module">
+        import { APPS_SCRIPT_URL, APPS_TEST_URL } from './js/config.js';
+        
+        // Make API URL available globally
+        window.API_BASE = APPS_SCRIPT_URL;
+        window.API_TEST = APPS_TEST_URL;
+        
+        // Update GAS URL field and API displays
+        document.getElementById('gasUrl').value = APPS_SCRIPT_URL;
+        document.getElementById('apiBaseDisplay').textContent = APPS_SCRIPT_URL;
+        document.getElementById('apiTestDisplay').textContent = APPS_TEST_URL;
+        
+        console.log('🔗 API Base URL loaded:', APPS_SCRIPT_URL);
+        console.log('🧪 API Test URL loaded:', APPS_TEST_URL);
+    </script>
+
     <script>
         document.getElementById('testForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -56,7 +82,7 @@
         async function testLogin() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const gasUrl = document.getElementById('gasUrl').value;
+            const gasUrl = window.API_BASE || document.getElementById('gasUrl').value;
             const resultsDiv = document.getElementById('results');
             
             resultsDiv.innerHTML = '<div class="text-blue-600">🔄 Testing connection...</div>';
@@ -78,7 +104,8 @@
                 const loginData = new URLSearchParams({
                     action: 'login',
                     username: username,
-                    password: password
+                    password: password,
+                    testMode: 'true'
                 });
                 
                 addResult(`📤 Sending data: ${loginData.toString()}`, 'info');
@@ -105,14 +132,24 @@
                     
                     if (result.status === 'success') {
                         addResult('🎉 Login successful!', 'success');
-                        if (result.data && result.data.token) {
-                            addResult(`🔑 Token received: ${result.data.token.substring(0, 20)}...`, 'success');
+                        if (result.token) {
+                            addResult(`🔑 Token received: ${result.token.substring(0, 30)}...`, 'success');
                         }
-                        if (result.data && result.data.user) {
-                            addResult(`👤 User data: ${JSON.stringify(result.data.user)}`, 'success');
+                        if (result.user) {
+                            addResult(`👤 User: ${result.user.fullName} (${result.user.email})`, 'success');
+                            addResult(`🏢 Role: ${result.user.role} | ID: ${result.user.id}`, 'success');
+                        }
+                    } else if (result.status === 'password_change_required') {
+                        addResult('🔄 Password change required!', 'info');
+                        addResult(`💡 Message: ${result.message}`, 'info');
+                        if (result.user) {
+                            addResult(`👤 User: ${result.user.fullName} (${result.user.email})`, 'info');
                         }
                     } else {
                         addResult(`❌ Login failed: ${result.message}`, 'error');
+                        if (result.debug) {
+                            addResult(`🐛 Debug info: ${JSON.stringify(result.debug)}`, 'error');
+                        }
                     }
                 } catch (parseError) {
                     addResult(`❌ Failed to parse JSON: ${parseError.message}`, 'error');
