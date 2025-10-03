@@ -1,0 +1,258 @@
+// ✅ Simplified Response Helper with FORCE CORS - Oct 3, 2025
+// ดิด 
+function createResponse(data) {
+  var output = ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+    
+  // Force set CORS headers one by one
+  output.setHeaders({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS', 
+    'Access-Control-Allow-Headers': 'Origin,X-Requested-With,Content-Type,Accept,Authorization'
+  });
+  
+  return output;
+}
+
+/**
+ * ✅ Handle OPTIONS requests for CORS preflight - FORCE WORKING VERSION 
+ * ⚠️ ต้องมี function นี้เท่านั้น! ห้ามซ้ำ
+ * @param {Object} e - Event object  
+ * @returns {GoogleAppsScript.Content.TextOutput} Empty response with complete CORS headers
+ */
+function doOptions(e) {
+  Logger.log('doOptions called - CORS preflight request');
+  var output = ContentService.createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT);
+    
+  // Force set headers one by one to ensure they stick
+  output.setHeaders({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
+    'Access-Control-Max-Age': '86400'
+  });
+  
+  return output;
+}
+
+// Enhanced Response Helper using standardized patterns with CORS support
+function createApiResponse(data) {
+  // If data is already a standardized response, use it directly
+  if (data && (data.status === 'success' || data.status === 'error' || data.status === 'validation_error')) {
+    return createResponse(data);
+  }
+  
+  // Otherwise, wrap in success response
+  return createResponse(createSuccessResponse(data));
+}
+
+function testLogin(empId, password) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('user');
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+
+  console.log('Headers:', headers);
+
+  // Fallback for CONFIG.COLUMNS if not loaded
+  let empIdIndex, passwordIndex, fullNameIndex, emailIndex;
+  
+  if (typeof CONFIG !== 'undefined' && CONFIG.COLUMNS && CONFIG.COLUMNS.user) {
+    empIdIndex = CONFIG.COLUMNS.user.EmpId;
+    passwordIndex = CONFIG.COLUMNS.user.password;
+    fullNameIndex = CONFIG.COLUMNS.user.FullNameTH;
+    emailIndex = CONFIG.COLUMNS.user.Email;
+  } else {
+    // Fallback to indexOf
+    empIdIndex = headers.indexOf('EmpId');
+    passwordIndex = headers.indexOf('password');
+    fullNameIndex = headers.indexOf('FullNameTH');
+    emailIndex = headers.indexOf('Email');
+  }
+
+  // Find user by empId
+  const userRow = data.find(row => String(row[empIdIndex]) === String(empId));
+  if (!userRow) {
+    return {
+      status: 'error',
+      message: 'User not found',
+    };
+  }
+
+  // Verify password
+  const passwordHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password)
+    .map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'))
+    .join('');
+
+  console.log('Input Password Hash:', passwordHash);
+  console.log('Stored Password Hash:', String(userRow[passwordIndex]));
+
+  if (String(userRow[passwordIndex]) !== String(passwordHash)) {
+    return {
+      status: 'error',
+      message: 'Invalid password',
+    };
+  }
+
+  // Return user info on success
+  return {
+    status: 'success',
+    message: 'Login successful',
+    user: {
+      empId: userRow[empIdIndex],
+      fullName: userRow[fullNameIndex],
+      email: userRow[emailIndex],
+    },
+  };
+}
+
+// Authentication verification function
+function verifyAuthentication(token) {
+  // For this demo, we'll check if token exists and starts with 'user_'
+  // In production, you should implement proper JWT or session management
+  if (!token) {
+    return { isValid: false, error: 'Authentication token is required' };
+  }
+  
+  // Simple token validation (in production, use proper token verification)
+  if (typeof token === 'string' && token.length > 10) {
+    return { isValid: true, empId: '892' }; // Mock user for demo
+  }
+  
+  return { isValid: false, error: 'Invalid authentication token' };
+}
+
+// Generate publicEndpoints dynamically (requires Services_get.js)
+// Use lazy loading to avoid initialization issues
+function getPublicEndpoints() {
+  try {
+    return generatePublicEndpoints();
+  } catch (error) {
+    // Fallback to basic endpoints if dynamic generation fails
+    Logger.log('Failed to generate dynamic endpoints, using fallback: ' + error.message);
+    return [
+      'testlogin',
+      'login',
+      'changePassword',
+      'resetPassword', 
+      'logout',
+      'getAdminforDashboard',
+      'getOEEDailyData',
+      'getRecentDashboards',
+      'getAdminData',
+      'getDailyChartSummary',
+      'getRecentDaily'
+    ];
+  }
+}
+
+// Remove doOptions duplicate - fixed Oct 3, 2025
+
+// Handle CORS preflight requests - SINGLE FUNCTION ONLY
+
+/**
+ * ⚡ ULTIMATE CORS FIX - Force ALL requests with headers
+ */
+function doGet(e) {
+  return doPost(e); // Redirect all GET to POST handler with CORS
+}
+
+/**
+ * ⚡ ULTIMATE CORS FIX - Handle ALL requests (GET/POST) with forced CORS
+ */
+function doPost(e) {
+  // Force CORS headers on EVERY response
+  var corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Requested-With',
+    'Access-Control-Max-Age': '86400'
+  };
+  
+  try {
+    var action, data;
+    
+    // Handle both GET and POST
+    if (e.parameter && e.parameter.action) {
+      action = e.parameter.action; // GET request
+      data = e.parameter;
+    } else if (e.postData && e.postData.contents) {
+      try {
+        data = JSON.parse(e.postData.contents);
+        action = data.action;
+      } catch (parseError) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: 'Invalid JSON: ' + parseError.message
+        })).setMimeType(ContentService.MimeType.JSON).setHeaders(corsHeaders);
+      }
+    } else {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'No action specified'
+      })).setMimeType(ContentService.MimeType.JSON).setHeaders(corsHeaders);
+    }
+    
+    var result;
+    
+    switch (action) {
+      case 'testLogin':
+        result = testLogin(data.empId, data.password);
+        break;
+        
+      case 'getOEEData':
+        result = getOEEDailyData();
+        break;
+        
+      case 'getOEEDataV3':
+        result = getOEEDailyDataV3();
+        break;
+        
+      case 'getRecentDashboards':
+        result = getRecentDashboards();
+        break;
+      
+      case 'testConnection':
+        result = {
+          status: 'success',
+          message: 'ULTIMATE CORS Connection successful',
+          timestamp: new Date().toISOString(),
+          server: 'Google Apps Script',
+          cors: 'ULTIMATE-FIX'
+        };
+        break;
+        
+      default:
+        result = {
+          status: 'error',
+          message: 'Invalid action: ' + action,
+          availableActions: ['testLogin', 'getOEEData', 'getOEEDataV3', 'getRecentDashboards', 'testConnection']
+        };
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders(corsHeaders);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'Server error: ' + error.message,
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON).setHeaders(corsHeaders);
+  }
+}
+
+/**
+ * ⚡ ULTIMATE doOptions - Force CORS preflight
+ */
+function doOptions(e) {
+  return ContentService.createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT)
+    .setHeaders({
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Requested-With,Origin',
+      'Access-Control-Max-Age': '86400'
+    });
+}

@@ -1,8 +1,9 @@
 /**
  * Utility functions used across the application
  * Common helper functions for data processing, validation, and responses
- * @requires Types.js - For type definitions
+ * @requires types/TypeDefinitions.js - For type definitions
  * @created 2025-09-27 (refactored)
+ * @moved 2025-10-03 (to utils/ directory for MVC structure)
  */
 
 // ==========================================
@@ -220,4 +221,110 @@ function getCurrentDate() {
 function calculatePercentageChange(oldValue, newValue) {
   if (oldValue === 0) return 0;
   return ((newValue - oldValue) / oldValue) * 100;
+}
+
+// ==========================================
+// HTTP Response Utilities (MVC Addition)
+// ==========================================
+
+/**
+ * Create ContentService JSON response for Google Apps Script
+ * @param {Object} responseData - Response data object
+ * @returns {GoogleAppsScript.Content.TextOutput} ContentService response
+ */
+function createContentServiceResponse(responseData) {
+  return ContentService.createTextOutput(JSON.stringify(responseData))
+                      .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Parse request parameters from various sources (GET/POST)
+ * @param {Object} event - Google Apps Script event object
+ * @param {string} paramName - Parameter name to extract
+ * @returns {string|null} Parameter value or null if not found
+ */
+function getRequestParam(event, paramName) {
+  // Check POST form data first (e.parameters)
+  if (event.parameters && event.parameters[paramName]) {
+    return event.parameters[paramName][0]; // Form data comes as arrays
+  }
+  
+  // Check URL parameters (e.parameter)
+  if (event.parameter && event.parameter[paramName]) {
+    return event.parameter[paramName];
+  }
+  
+  return null;
+}
+
+/**
+ * Extract all parameters from request event
+ * @param {Object} event - Google Apps Script event object
+ * @returns {Object} Object containing all parameters
+ */
+function getAllRequestParams(event) {
+  const params = {};
+  
+  // Get URL parameters
+  if (event.parameter) {
+    Object.assign(params, event.parameter);
+  }
+  
+  // Get form data parameters (override URL params if present)
+  if (event.parameters) {
+    for (const key in event.parameters) {
+      params[key] = event.parameters[key][0]; // Take first value from array
+    }
+  }
+  
+  return params;
+}
+
+// ==========================================
+// Array and Object Utilities (MVC Addition)
+// ==========================================
+
+/**
+ * Deep clone an object (simple implementation for basic objects)
+ * @param {Object} obj - Object to clone
+ * @returns {Object} Deep cloned object
+ */
+function deepClone(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (obj instanceof Date) return new Date(obj.getTime());
+  if (obj instanceof Array) return obj.map(item => deepClone(item));
+  
+  const cloned = {};
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      cloned[key] = deepClone(obj[key]);
+    }
+  }
+  return cloned;
+}
+
+/**
+ * Check if object has all required properties
+ * @param {Object} obj - Object to check
+ * @param {string[]} requiredProps - Array of required property names
+ * @returns {boolean} True if all required properties exist
+ */
+function hasRequiredProperties(obj, requiredProps) {
+  if (!obj || typeof obj !== 'object') return false;
+  return requiredProps.every(prop => obj.hasOwnProperty(prop) && obj[prop] !== undefined);
+}
+
+/**
+ * Remove undefined/null properties from object
+ * @param {Object} obj - Object to clean
+ * @returns {Object} Object with undefined/null properties removed
+ */
+function removeEmptyProperties(obj) {
+  const cleaned = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
+      cleaned[key] = obj[key];
+    }
+  }
+  return cleaned;
 }
