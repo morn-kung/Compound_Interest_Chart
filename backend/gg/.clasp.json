@@ -11,6 +11,33 @@
   "jsonExtensions": [
     ".json"
   ],
-  "filePushOrder": [],
+  "filePushOrder": [
+    "Types.js",
+    "Config.js",
+    "TypeDefinitions.js",
+    "ApiResponse.js",
+    "BaseController.js",
+    "BaseModel.js",
+    "AccountModel.js",
+    "TradingModel.js",
+    "UserModel.js",
+    "AssetModel.js",
+    "UtilityFunctions.js",
+    "ValidationService.js",
+    "AccountController.js",
+    "AssetController.js",
+    "AuthController.js",
+    "TradingController.js",
+    "Services_Auth.js",
+    "TradingService.js",
+    "AccountService.js",
+    "AssetService.js",
+    "PasswordService.js",
+    "PasswordResetService.js",
+    "Services_System.js",
+    "AdminSchemaFunctions.js",
+    "DataGeneratorService.js",
+    "Code.js"
+  ],
   "skipSubdirectories": false
 }

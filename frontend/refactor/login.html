@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Login Portal - Refactor Version</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .version-badge {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-bottom: 30px;
+            display: inline-block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-bottom: 20px;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result-container {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: left;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border: 2px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .quick-login {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .quick-login button {
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .quick-login button:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online { background: #28a745; }
+        .status-offline { background: #dc3545; }
+        .status-loading { background: #ffc107; }
+        
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🔐</div>
+        <h1>Login Portal</h1>
+        <div class="version-badge">
+            V20251003T2233-Refactor-mod (@17)
+        </div>
+        
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="username">
+                    <span class="status-indicator status-loading" id="connectionStatus"></span>
+                    Username (EmpId or Email)
+                </label>
+                <input type="text" id="username" name="username" value="4498" 
+                       placeholder="Enter your EmpId or Email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" value="likit.se4498"
+                       placeholder="Enter your password" required>
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">
+                🚀 Login
+            </button>
+        </form>
+        
+        <div class="quick-login">
+            <button onclick="quickLogin('4498', 'likit.se4498')">👨‍💼 Admin</button>
+            <button onclick="quickLogin('user001', 'password123')">👤 User</button>
+            <button onclick="quickLogin('wrong', 'wrong')">❌ Wrong</button>
+            <button onclick="clearForm()">🗑️ Clear</button>
+        </div>
+        
+        <div id="result" class="result-container"></div>
+        
+        <div class="footer">
+            <div style="margin-bottom: 10px;">
+                <strong>Deployment:</strong> AKfycbwBVLfsvnVsVTyrc8knKAuMr_ChVFCYsnKCN8CUlpQOOu_HqC5xcnFiFJ1IDv6GqkUY
+            </div>
+            <div style="font-size: 10px; color: #999;">
+                Google Apps Script | Enhanced Error Handling | CORS Ready
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🔧 Configuration
+        const CONFIG = {
+            gasUrl: 'https://script.google.com/macros/s/AKfycbwBVLfsvnVsVTyrc8knKAuMr_ChVFCYsnKCN8CUlpQOOu_HqC5xcnFiFJ1IDv6GqkUY/exec',
+            timeout: 30000,
+            version: 'V20251003T2233-Refactor-mod'
+        };
+        
+        // 🔄 State Management
+        let currentUser = null;
+        let currentToken = null;
+        
+        // 🛠️ Utility Functions
+        function showResult(data, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = `result-container ${type}`;
+            
+            if (typeof data === 'object') {
+                resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } else {
+                resultDiv.innerHTML = '<pre>' + data + '</pre>';
+            }
+        }
+        
+        function showLoading(message = 'กำลังเข้าสู่ระบบ...') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result-container info';
+            resultDiv.innerHTML = `<span class="loading"></span>${message}`;
+            
+            // Disable login button
+            document.getElementById('loginBtn').disabled = true;
+            document.getElementById('loginBtn').innerHTML = '<span class="loading"></span>กำลังเข้าสู่ระบบ...';
+        }
+        
+        function resetLoginButton() {
+            document.getElementById('loginBtn').disabled = false;
+            document.getElementById('loginBtn').innerHTML = '🚀 Login';
+        }
+        
+        function setConnectionStatus(status) {
+            const indicator = document.getElementById('connectionStatus');
+            indicator.className = `status-indicator status-${status}`;
+        }
+        
+        // 🔐 Login Function
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showResult({
+                    status: 'error',
+                    message: 'กรุณากรอก Username และ Password ให้ครบถ้วน',
+                    timestamp: new Date().toISOString()
+                }, 'warning');
+                return;
+            }
+            
+            showLoading('กำลังตรวจสอบข้อมูลการเข้าสู่ระบบ...');
+            setConnectionStatus('loading');
+            
+            try {
+                // Create form data
+                const formData = new FormData();
+                formData.append('action', 'login');
+                formData.append('username', username);
+                formData.append('password', password);
+                
+                // Send login request
+                const response = await fetch(CONFIG.gasUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                // Parse response
+                const data = await response.json();
+                
+                // Create detailed result
+                const loginResult = {
+                    timestamp: new Date().toISOString(),
+                    username: username,
+                    version: CONFIG.version,
+                    response_status: response.status,
+                    gas_response: data
+                };
+                
+                // Handle different login results
+                if (data.status === 'success') {
+                    // Successful login
+                    currentUser = data.data.user;
+                    currentToken = data.data.token;
+                    
+                    loginResult.login_status = '✅ เข้าสู่ระบบสำเร็จ!';
+                    loginResult.user_info = currentUser;
+                    loginResult.token_received = currentToken ? '✅ Yes' : '❌ No';
+                    
+                    showResult(loginResult, 'success');
+                    setConnectionStatus('online');
+                    
+                    // Optional: Redirect or enable dashboard features
+                    setTimeout(() => {
+                        if (confirm('เข้าสู่ระบบสำเร็จ! ต้องการไป Dashboard หรือไม่?')) {
+                            // window.location.href = 'dashboard.html';
+                            alert('Dashboard feature coming soon!');
+                        }
+                    }, 2000);
+                    
+                } else if (data.status === 'password_change_required') {
+                    // Password change required
+                    loginResult.login_status = '⚠️ ต้องเปลี่ยนรหัสผ่าน';
+                    loginResult.action_required = data.action;
+                    loginResult.redirect_to = data.redirectTo;
+                    
+                    showResult(loginResult, 'warning');
+                    setConnectionStatus('offline');
+                    
+                    setTimeout(() => {
+                        if (confirm('ต้องเปลี่ยนรหัสผ่านก่อนเข้าใช้งาน ต้องการไปหน้าเปลี่ยนรหัสผ่านหรือไม่?')) {
+                            // window.location.href = 'change-password.html';
+                            alert('Change password feature coming soon!');
+                        }
+                    }, 2000);
+                    
+                } else {
+                    // Login failed
+                    loginResult.login_status = '❌ เข้าสู่ระบบไม่สำเร็จ';
+                    loginResult.error_message = data.message;
+                    loginResult.error_code = data.code;
+                    
+                    showResult(loginResult, 'error');
+                    setConnectionStatus('offline');
+                }
+                
+            } catch (error) {
+                // Network or parsing error
+                const errorResult = {
+                    timestamp: new Date().toISOString(),
+                    login_status: '❌ เกิดข้อผิดพลาดในการเชื่อมต่อ',
+                    error_type: error.name,
+                    error_message: error.message,
+                    possible_causes: [
+                        'ปัญหาการเชื่อมต่ออินเทอร์เน็ต',
+                        'GAS Web App ไม่สามารถเข้าถึงได้',
+                        'CORS configuration ปัญหา',
+                        'Server Error (500)'
+                    ],
+                    troubleshooting: 'ลองรีเฟรชหน้าเว็บแล้วลองใหม่ หรือตรวจสอบ Console ในเบราว์เซอร์'
+                };
+                
+                showResult(errorResult, 'error');
+                setConnectionStatus('offline');
+            } finally {
+                resetLoginButton();
+            }
+        }
+        
+        // 🚀 Quick Login Functions
+        function quickLogin(user, pass) {
+            document.getElementById('username').value = user;
+            document.getElementById('password').value = pass;
+            
+            // Auto-submit after short delay
+            setTimeout(() => {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }, 100);
+        }
+        
+        function clearForm() {
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('result').style.display = 'none';
+            currentUser = null;
+            currentToken = null;
+            setConnectionStatus('loading');
+        }
+        
+        // 🌐 Connection Test
+        async function testConnection() {
+            try {
+                setConnectionStatus('loading');
+                
+                // Use POST instead of GET to avoid CORS issues with query parameters
+                const formData = new FormData();
+                formData.append('action', 'testConnection');
+                
+                const response = await fetch(CONFIG.gasUrl, {
+                    method: 'POST',
+                    body: formData,
+                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        setConnectionStatus('online');
+                        console.log('✅ GAS connection successful:', data.data);
+                    } else {
+                        setConnectionStatus('offline');
+                        console.log('❌ GAS connection failed:', data);
+                    }
+                } else {
+                    setConnectionStatus('offline');
+                    console.log('❌ GAS connection failed:', response.status);
+                }
+            } catch (error) {
+                setConnectionStatus('offline');
+                console.log('❌ GAS connection error:', error.message);
+            }
+        }
+        
+        // 🚀 Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔐 Login Portal - Refactor Version Loaded');
+            console.log('📦 Version:', CONFIG.version);
+            console.log('🔗 GAS URL:', CONFIG.gasUrl);
+            
+            // Test connection on load
+            testConnection();
+            
+            // Focus username field
+            document.getElementById('username').focus();
+            
+            // Auto-test connection every 30 seconds
+            setInterval(testConnection, 30000);
+        });
+        
+        // 🔧 Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Alt + 1: Admin quick login
+            if (event.altKey && event.key === '1') {
+                event.preventDefault();
+                quickLogin('4498', 'likit.se4498');
+            }
+            
+            // Alt + 2: User quick login
+            if (event.altKey && event.key === '2') {
+                event.preventDefault();
+                quickLogin('user001', 'password123');
+            }
+            
+            // Alt + C: Clear form
+            if (event.altKey && event.key === 'c') {
+                event.preventDefault();
+                clearForm();
+            }
+        });
+    </script>
+</body>
+</html>

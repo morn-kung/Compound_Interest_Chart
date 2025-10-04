@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Login - Refactor Version</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+        
+        .test-section h3 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input[type="text"], input[type="password"], input[type="url"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus, input[type="url"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border: 2px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .quick-tests {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .version-info {
+            background: #e3f2fd;
+            border: 2px solid #90caf9;
+            color: #1565c0;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Login - Refactor Version</h1>
+        
+        <div class="version-info">
+            📦 <strong>Version:</strong> V20251003T2233-Refactor-mod<br>
+            🚀 <strong>Deployment ID:</strong> AKfycbwBVLfsvnVsVTyrc8knKAuMr_ChVFCYsnKCN8CUlpQOOu_HqC5xcnFiFJ1IDv6GqkUY
+        </div>
+        
+        <!-- GAS URL Configuration -->
+        <div class="test-section">
+            <h3>🔗 GAS Web App URL</h3>
+            <div class="form-group">
+                <label for="gasUrl">Google Apps Script Web App URL:</label>
+                <input type="url" id="gasUrl" 
+                       value="https://script.google.com/macros/s/AKfycbwBVLfsvnVsVTyrc8knKAuMr_ChVFCYsnKCN8CUlpQOOu_HqC5xcnFiFJ1IDv6GqkUY/exec"
+                       placeholder="https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec">
+            </div>
+        </div>
+        
+        <!-- CORS Test -->
+        <div class="test-section">
+            <h3>🌐 CORS Test</h3>
+            <p style="color: #666; margin-bottom: 15px;">ทดสอบว่า GAS รองรับ CORS หรือไม่</p>
+            <button onclick="testCORS()">🧪 Test CORS Connection</button>
+            <button onclick="testHealthEndpoint()">❤️ Test Health Endpoint</button>
+            <div id="corsResult" class="result-box info" style="display: none;"></div>
+        </div>
+        
+        <!-- Login Test -->
+        <div class="test-section">
+            <h3>🔐 Login Test</h3>
+            <div class="form-group">
+                <label for="username">Username (EmpId or Email):</label>
+                <input type="text" id="username" value="4498" placeholder="Enter EmpId or Email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" value="likit.se4498" placeholder="Enter Password">
+            </div>
+            <button onclick="testLogin()">🔐 Test Login</button>
+            <button onclick="testLoginGET()">📝 Test Login (GET - should fail)</button>
+            <div class="quick-tests">
+                <button onclick="quickTest('4498', 'likit.se4498')">🚀 Quick Test (4498)</button>
+                <button onclick="quickTest('user001', 'password123')">👤 Test User001</button>
+                <button onclick="quickTest('admin', 'admin123')">🔑 Test Admin</button>
+                <button onclick="quickTest('wrong', 'wrong')">❌ Test Wrong</button>
+            </div>
+            <div id="loginResult" class="result-box info" style="display: none;"></div>
+        </div>
+        
+        <!-- Additional Tests -->
+        <div class="test-section">
+            <h3>🔍 Additional API Tests</h3>
+            <button onclick="testGetAccounts()">📊 Test getAccounts</button>
+            <button onclick="testGetAssets()">💰 Test getAssets</button>
+            <button onclick="testWithToken()">🎫 Test with Token</button>
+            <div id="apiResult" class="result-box info" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 🔧 Configuration
+        const CONFIG = {
+            defaultGasUrl: 'https://script.google.com/macros/s/AKfycbwdYBaiIvDkGaWDBhfzlfShBy8giqGzoB2DDAcw39T-wPLz1-GI8gzsZkP4N-_d5BeS/exec',
+            timeout: 30000 // 30 seconds
+        };
+        
+        let currentToken = null;
+        
+        // 🛠️ Utility Functions
+        function getGasUrl() {
+            return document.getElementById('gasUrl').value || CONFIG.defaultGasUrl;
+        }
+        
+        function showResult(elementId, data, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result-box ${type}`;
+            
+            if (typeof data === 'object') {
+                element.textContent = JSON.stringify(data, null, 2);
+            } else {
+                element.textContent = data;
+            }
+        }
+        
+        function showLoading(elementId, message = 'กำลังทดสอบ...') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result-box info';
+            element.innerHTML = `<span class="loading"></span>${message}`;
+        }
+        
+        // 🧪 CORS Tests
+        async function testCORS() {
+            showLoading('corsResult', 'ทดสอบ CORS connection...');
+            
+            try {
+                const gasUrl = getGasUrl();
+                const response = await fetch(gasUrl + '?action=testConnection', {
+                    method: 'GET',
+                    mode: 'cors', // Force CORS mode
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    cors_status: '✅ CORS Working!',
+                    response_status: response.status,
+                    response_headers: Object.fromEntries(response.headers.entries()),
+                    data: data
+                };
+                
+                showResult('corsResult', result, 'success');
+                
+            } catch (error) {
+                const errorResult = {
+                    timestamp: new Date().toISOString(),
+                    cors_status: '❌ CORS Failed!',
+                    error: error.message,
+                    error_type: error.name,
+                    note: 'นี่อาจเป็นปัญหา CORS หรือ network connectivity'
+                };
+                
+                showResult('corsResult', errorResult, 'error');
+            }
+        }
+        
+        async function testHealthEndpoint() {
+            showLoading('corsResult', 'ทดสอบ Health endpoint...');
+            
+            try {
+                const gasUrl = getGasUrl();
+                const response = await fetch(gasUrl + '?action=getSystemHealth', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    endpoint: 'getSystemHealth',
+                    status: response.ok ? '✅ Success' : '❌ Failed',
+                    data: data
+                };
+                
+                showResult('corsResult', result, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('corsResult', {
+                    timestamp: new Date().toISOString(),
+                    endpoint: 'getSystemHealth',
+                    error: error.message
+                }, 'error');
+            }
+        }
+        
+        // 🔐 Login Tests
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showResult('loginResult', {
+                    error: 'กรุณากรอก Username และ Password',
+                    timestamp: new Date().toISOString()
+                }, 'warning');
+                return;
+            }
+            
+            showLoading('loginResult', 'กำลังทดสอบ Login...');
+            
+            try {
+                const gasUrl = getGasUrl();
+                const formData = new FormData();
+                formData.append('action', 'login');
+                formData.append('username', username);
+                formData.append('password', password);
+                
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                // เก็บ token ถ้า login สำเร็จ
+                if (data.status === 'success' && data.data && data.data.token) {
+                    currentToken = data.data.token;
+                }
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    method: 'POST',
+                    username: username,
+                    response_status: response.status,
+                    login_result: data.status === 'success' ? '✅ Login Success!' : '❌ Login Failed!',
+                    data: data,
+                    token_saved: currentToken ? '✅ Token saved for further tests' : '❌ No token received'
+                };
+                
+                showResult('loginResult', result, data.status === 'success' ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('loginResult', {
+                    timestamp: new Date().toISOString(),
+                    login_result: '❌ Login Error!',
+                    error: error.message,
+                    note: 'เกิดข้อผิดพลาดในการเชื่อมต่อ'
+                }, 'error');
+            }
+        }
+        
+        async function testLoginGET() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            showLoading('loginResult', 'ทดสอบ Login ด้วย GET (ควรจะ fail)...');
+            
+            try {
+                const gasUrl = getGasUrl();
+                const url = `${gasUrl}?action=login&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    method: 'GET',
+                    expected: 'Should fail (405 Method Not Allowed)',
+                    actual_result: data.status === 'error' ? '✅ Correctly rejected GET' : '❌ Unexpectedly allowed GET',
+                    data: data
+                };
+                
+                showResult('loginResult', result, data.status === 'error' ? 'success' : 'warning');
+                
+            } catch (error) {
+                showResult('loginResult', {
+                    timestamp: new Date().toISOString(),
+                    method: 'GET',
+                    error: error.message
+                }, 'error');
+            }
+        }
+        
+        function quickTest(user, pass) {
+            document.getElementById('username').value = user;
+            document.getElementById('password').value = pass;
+            testLogin();
+        }
+        
+        // 🔍 API Tests
+        async function testGetAccounts() {
+            showLoading('apiResult', 'ทดสอบ getAccounts API...');
+            
+            try {
+                const gasUrl = getGasUrl();
+                const response = await fetch(gasUrl + '?action=getAccounts', {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    endpoint: 'getAccounts',
+                    status: response.ok ? '✅ Success' : '❌ Failed',
+                    data: data
+                };
+                
+                showResult('apiResult', result, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('apiResult', {
+                    timestamp: new Date().toISOString(),
+                    endpoint: 'getAccounts',
+                    error: error.message
+                }, 'error');
+            }
+        }
+        
+        async function testGetAssets() {
+            showLoading('apiResult', 'ทดสอบ getAssets API...');
+            
+            try {
+                const gasUrl = getGasUrl();
+                const response = await fetch(gasUrl + '?action=getAssets', {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    endpoint: 'getAssets',
+                    status: response.ok ? '✅ Success' : '❌ Failed',
+                    data: data
+                };
+                
+                showResult('apiResult', result, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('apiResult', {
+                    timestamp: new Date().toISOString(),
+                    endpoint: 'getAssets',
+                    error: error.message
+                }, 'error');
+            }
+        }
+        
+        async function testWithToken() {
+            if (!currentToken) {
+                showResult('apiResult', {
+                    error: 'ไม่มี Token! กรุณา Login ให้สำเร็จก่อน',
+                    note: 'ทดสอบ Login ให้สำเร็จแล้วลองใหม่',
+                    timestamp: new Date().toISOString()
+                }, 'warning');
+                return;
+            }
+            
+            showLoading('apiResult', 'ทดสอบ API ด้วย Token...');
+            
+            try {
+                const gasUrl = getGasUrl();
+                const response = await fetch(gasUrl + `?action=getUserInfo&token=${currentToken}`, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    endpoint: 'getUserInfo',
+                    token_used: currentToken.substring(0, 20) + '...',
+                    status: response.ok ? '✅ Success' : '❌ Failed',
+                    data: data
+                };
+                
+                showResult('apiResult', result, response.ok && data.status === 'success' ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('apiResult', {
+                    timestamp: new Date().toISOString(),
+                    endpoint: 'getUserInfo (with token)',
+                    error: error.message
+                }, 'error');
+            }
+        }
+        
+        // 🚀 Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Test Login - Refactor Version Loaded');
+            console.log('📦 Version: V20251003T2233-Refactor');
+            
+            // Auto-test CORS on load
+            setTimeout(testCORS, 1000);
+        });
+    </script>
+</body>
+</html>

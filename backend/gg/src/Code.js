@@ -104,10 +104,13 @@ function handleGetRequest(e) {
   
   // Public endpoints (no authentication required)
   const publicEndpoints = [
-    'login',        // LOGIN ENDPOINT (redirects to POST)
+    'login',          // LOGIN ENDPOINT (redirects to POST)
     'getAccounts', 
     'getAssets',
-    'resetPassword' // Password reset endpoint
+    'resetPassword',  // Password reset endpoint
+    'testConnection', // Connection test endpoint
+    'health',         // Health check endpoint
+    'ping'            // Simple ping endpoint
   ];
   
   // Check authentication for protected endpoints
@@ -120,6 +123,19 @@ function handleGetRequest(e) {
   }
   
   switch (action) {
+    case 'testConnection':
+    case 'health':
+    case 'ping':
+      // Connection test endpoints
+      return createEnhancedJSONResponse('success', {
+        message: 'Connection successful',
+        server: 'Google Apps Script',
+        timestamp: new Date().toISOString(),
+        version: 'V20251003T2233-Refactor',
+        status: 'online',
+        endpoint: action
+      });
+    
     case 'getAccounts':
       return ContentService.createTextOutput(JSON.stringify(getAccounts()))
                           .setMimeType(ContentService.MimeType.JSON);
@@ -357,6 +373,19 @@ function handlePostRequest(e) {
   const username = getParam('username');
   const password = getParam('password');
   const token = getParam('token');
+  
+  // Handle connection test request (PUBLIC endpoint)
+  if (action === 'testConnection' || action === 'health' || action === 'ping') {
+    return createEnhancedJSONResponse('success', {
+      message: 'Connection successful',
+      server: 'Google Apps Script',
+      timestamp: new Date().toISOString(),
+      version: 'V20251003T2233-Refactor',
+      status: 'online',
+      endpoint: action,
+      method: 'POST'
+    });
+  }
   
   // Handle login request (PUBLIC - main login endpoint)
   if (action === 'login') {

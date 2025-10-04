@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple GAS Test</title>
+</head>
+<body>
+    <h1>🧪 Simple GAS Connection Test</h1>
+    <button onclick="testGAS()">Test GAS Connection</button>
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwBVLfsvnVsVTyrc8knKAuMr_ChVFCYsnKCN8CUlpQOOu_HqC5xcnFiFJ1IDv6GqkUY/exec';
+        
+        async function testGAS() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '🔄 Testing...';
+            
+            try {
+                // Simple GET request
+                const response = await fetch(GAS_URL);
+                const text = await response.text();
+                
+                resultDiv.innerHTML = `
+                    <h3>Response:</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>OK:</strong> ${response.ok}</p>
+                    <p><strong>Headers:</strong> ${JSON.stringify([...response.headers.entries()])}</p>
+                    <pre>${text}</pre>
+                `;
+                
+                console.log('Response:', response);
+                console.log('Text:', text);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>❌ Error:</h3>
+                    <p><strong>Type:</strong> ${error.name}</p>
+                    <p><strong>Message:</strong> ${error.message}</p>
+                    <p><strong>Stack:</strong></p>
+                    <pre>${error.stack}</pre>
+                `;
+                
+                console.error('Error:', error);
+            }
+        }
+        
+        // Test immediately when page loads
+        window.onload = () => {
+            console.log('🚀 Testing GAS URL:', GAS_URL);
+            testGAS();
+        };
+    </script>
+</body>
+</html>

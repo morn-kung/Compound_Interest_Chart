@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Connection - File Protocol</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            text-align: left;
+        }
+        
+        .test-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .button {
+            padding: 12px 24px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+            white-space: pre-wrap;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .result.info {
+            background: #d1ecf1;
+            border: 2px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .deployment-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .step-indicator {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            line-height: 24px;
+            margin-right: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🧪</div>
+        <h1>Test Connection</h1>
+        <p class="subtitle">ทดสอบการเชื่อมต่อ GAS แบบ file:// protocol (ไม่มี Mixed Content Issues)</p>
+        
+        <div class="deployment-info">
+            <strong>📋 Current GAS Deployment:</strong><br>
+            ID: AKfycbwBVLfsvnVsVTyrc8knKAuMr_ChVFCYsnKCN8CUlpQOOu_HqC5xcnFiFJ1IDv6GqkUY<br>
+            Version: V20251003T2233-Refactor-mod (@17)<br>
+            Status: ✅ testConnection endpoints ได้ deploy แล้ว!
+        </div>
+        
+        <!-- Step 1: Basic Connection Test -->
+        <div class="test-section">
+            <h3><span class="step-indicator">1</span>Basic Connection Test</h3>
+            <p>ทดสอบการเชื่อมต่อพื้นฐานไปยัง GAS (ใช้ simple GET request ที่ GAS รู้จัก)</p>
+            <button class="button btn-primary" onclick="testBasicConnection()">
+                🌐 Test Basic Connection
+            </button>
+            <div id="basicResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <!-- Step 2: Test testConnection Endpoint -->
+        <div class="test-section">
+            <h3><span class="step-indicator">2</span>Test Connection Endpoint</h3>
+            <p>ทดสอบ testConnection endpoint ที่เราเพิ่มใหม่ (อาจจะยังไม่ได้ deploy)</p>
+            <button class="button btn-secondary" onclick="testConnectionEndpoint()">
+                🔍 Test testConnection Endpoint
+            </button>
+            <div id="testConnectionResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <!-- Step 3: Test Login -->
+        <div class="test-section">
+            <h3><span class="step-indicator">3</span>Test Login Function</h3>
+            <p>ทดสอบการ Login (ใช้ POST method)</p>
+            <button class="button btn-success" onclick="testLogin()">
+                🔐 Test Admin Login
+            </button>
+            <div id="loginResult" class="result" style="display: none;"></div>
+        </div>
+        
+        <!-- Step 4: Clear All Results -->
+        <div class="test-section">
+            <h3><span class="step-indicator">🗑️</span>Clear Results</h3>
+            <p>ล้างผลลัพธ์ทั้งหมด</p>
+            <button class="button btn-danger" onclick="clearAllResults()">
+                🗑️ Clear All Results
+            </button>
+        </div>
+        
+        <div class="deployment-info" style="margin-top: 30px;">
+            <strong>💡 คำแนะนำ:</strong><br>
+            1. ถ้า Step 1 สำเร็จ = GAS connection ทำงาน<br>
+            2. ถ้า Step 2 ล้มเหลว = ยังไม่ได้ push testConnection endpoints<br>
+            3. ถ้า Step 3 สำเร็จ = ระบบ Login ทำงานปกติ<br>
+            4. ใช้ file:// protocol = ไม่มีปัญหา Mixed Content
+        </div>
+    </div>
+
+    <script>
+        // 🔧 Configuration
+        const CONFIG = {
+            gasUrl: 'https://script.google.com/macros/s/AKfycbw9KitTE_kS-4JUn_uydhT0ffLJdUHqHVSKKsiACO8IR9WNYuctLrAUaROY_8JvzDq1/exec',
+            timeout: 15000
+        };
+        
+        // 🛠️ Utility Functions
+        function showResult(elementId, data, type = 'info') {
+            const resultDiv = document.getElementById(elementId);
+            resultDiv.style.display = 'block';
+            resultDiv.className = `result ${type}`;
+            
+            if (typeof data === 'object') {
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } else {
+                resultDiv.textContent = data;
+            }
+        }
+        
+        function showLoading(elementId, message = 'กำลังทดสอบ...') {
+            const resultDiv = document.getElementById(elementId);
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = `<span class="loading"></span>${message}`;
+        }
+        
+        // 📡 Test Functions
+        
+        // Step 1: Basic Connection Test
+        async function testBasicConnection() {
+            showLoading('basicResult', 'กำลังทดสอบ Basic Connection...');
+            
+            try {
+                // ใช้ simple GET request ไปยัง GAS (ไม่ระบุ action = จะได้ default response)
+                const response = await fetch(CONFIG.gasUrl, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(CONFIG.timeout)
+                });
+                
+                const data = await response.text(); // ใช้ text() ก่อน
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    test: 'Basic Connection Test',
+                    status: response.ok ? '✅ SUCCESS' : '❌ FAILED',
+                    response_status: response.status,
+                    response_ok: response.ok,
+                    response_data: data,
+                    note: response.ok ? 'GAS สามารถเชื่อมต่อได้' : 'GAS เชื่อมต่อไม่ได้'
+                };
+                
+                showResult('basicResult', result, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                const errorResult = {
+                    timestamp: new Date().toISOString(),
+                    test: 'Basic Connection Test',
+                    status: '❌ ERROR',
+                    error_type: error.name,
+                    error_message: error.message,
+                    possible_causes: [
+                        'ไม่มี Internet connection',
+                        'GAS URL ไม่ถูกต้อง',
+                        'GAS Web App ไม่ได้ Deploy',
+                        'Firewall blocking'
+                    ]
+                };
+                
+                showResult('basicResult', errorResult, 'error');
+            }
+        }
+        
+        // Step 2: Test testConnection Endpoint
+        async function testConnectionEndpoint() {
+            showLoading('testConnectionResult', 'กำลังทดสอบ testConnection endpoint...');
+            
+            try {
+                // ทดสอบ GET method กับ testConnection action
+                const response = await fetch(CONFIG.gasUrl + '?action=testConnection', {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(CONFIG.timeout)
+                });
+                
+                const data = await response.json();
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    test: 'testConnection Endpoint Test',
+                    method: 'GET',
+                    status: response.ok && data.status === 'success' ? '✅ SUCCESS' : '❌ FAILED',
+                    response_status: response.status,
+                    gas_response: data,
+                    note: response.ok && data.status === 'success' ? 
+                          'testConnection endpoint ทำงานแล้ว!' : 
+                          'testConnection endpoint ยังไม่ได้ deploy หรือมีปัญหา'
+                };
+                
+                showResult('testConnectionResult', result, 
+                          response.ok && data.status === 'success' ? 'success' : 'error');
+                
+            } catch (error) {
+                const errorResult = {
+                    timestamp: new Date().toISOString(),
+                    test: 'testConnection Endpoint Test',
+                    status: '❌ ERROR',
+                    error_type: error.name,
+                    error_message: error.message,
+                    conclusion: 'testConnection endpoint ยังไม่ได้ push ไป GAS หรือมีปัญหา CORS',
+                    next_action: 'ต้อง clasp push ก่อน'
+                };
+                
+                showResult('testConnectionResult', errorResult, 'error');
+            }
+        }
+        
+        // Step 3: Test Login
+        async function testLogin() {
+            showLoading('loginResult', 'กำลังทดสอบ Login...');
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'login');
+                formData.append('username', '4498');
+                formData.append('password', 'likit.se4498');
+                
+                const response = await fetch(CONFIG.gasUrl, {
+                    method: 'POST',
+                    body: formData,
+                    signal: AbortSignal.timeout(CONFIG.timeout)
+                });
+                
+                const data = await response.json();
+                
+                const result = {
+                    timestamp: new Date().toISOString(),
+                    test: 'Login Test',
+                    method: 'POST',
+                    username: '4498',
+                    status: response.ok && data.status === 'success' ? '✅ LOGIN SUCCESS' : '❌ LOGIN FAILED',
+                    response_status: response.status,
+                    login_response: data,
+                    note: response.ok && data.status === 'success' ? 
+                          'Login ระบบทำงานปกติ!' : 
+                          'Login มีปัญหา - ตรวจสอบ username/password หรือ GAS code'
+                };
+                
+                showResult('loginResult', result, 
+                          response.ok && data.status === 'success' ? 'success' : 'error');
+                
+            } catch (error) {
+                const errorResult = {
+                    timestamp: new Date().toISOString(),
+                    test: 'Login Test',
+                    status: '❌ ERROR',
+                    error_type: error.name,
+                    error_message: error.message,
+                    possible_causes: [
+                        'GAS connection ไม่ได้',
+                        'Login service มีปัญหา',
+                        'Database/Sheet ไม่สามารถเข้าถึงได้'
+                    ]
+                };
+                
+                showResult('loginResult', errorResult, 'error');
+            }
+        }
+        
+        // Clear All Results
+        function clearAllResults() {
+            const resultDivs = ['basicResult', 'testConnectionResult', 'loginResult'];
+            resultDivs.forEach(id => {
+                const div = document.getElementById(id);
+                div.style.display = 'none';
+                div.textContent = '';
+            });
+        }
+        
+        // 🚀 Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Test Connection - File Protocol Ready');
+            console.log('📦 GAS URL:', CONFIG.gasUrl);
+            console.log('⚠️  Note: testConnection endpoints may not be deployed yet');
+        });
+    </script>
+</body>
+</html>
